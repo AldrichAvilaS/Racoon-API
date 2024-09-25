@@ -25,7 +25,9 @@ def login():
         return jsonify({"error": "Credenciales inválidas"}), 401
 
     login_user(user)  # Inicia sesión
-    return jsonify({"message": "Inicio de sesión exitoso"}), 200
+    return jsonify({"message": "Inicio de sesión exitoso", 
+                    "user_type": user.get_role()
+                    }), 200
 
 # Endpoint para cerrar sesión
 @auth_bp.route('/logout', methods=['POST'])

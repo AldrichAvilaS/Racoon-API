@@ -15,7 +15,7 @@ class Role(db.Model):
 
 # Modelo de usuario
 class User(db.Model, UserMixin):
-    boleta = db.Column(db.Integer, primary_key=True)  # Cambiado para que boleta sea la clave primaria
+    boleta = db.Column(db.Integer, unique=True, primary_key=True)  # Cambiado para que boleta sea la clave primaria
     email = db.Column(db.String(120), unique=True, nullable=False)
     password = db.Column(db.String(200), nullable=False)
     nombre = db.Column(db.String(100), nullable=False)
@@ -28,6 +28,15 @@ class User(db.Model, UserMixin):
 
     def __repr__(self):
         return f'<User {self.email}>'
+    
+    def get_id(self):
+        return self.boleta  # Devuelve el ID del usuario
+    def get_role(self):
+        return self.role_id
+    def get_email(self):
+        return self.email
+    def get_name(self):
+        return self.nombre
 
 def init_db(app):
     """Inicializa la base de datos con la aplicación."""
