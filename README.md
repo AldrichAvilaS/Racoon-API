@@ -6,3 +6,4 @@ Flask-SQLAlchemy
 PyMySQL
 Flask-Security
 mysqlclient
+logging

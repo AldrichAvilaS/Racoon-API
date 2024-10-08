@@ -4,6 +4,7 @@ from werkzeug.security import generate_password_hash
 from app.decorators import role_required  # Importar el decorador
 from sqlalchemy.exc import IntegrityError
 from .db import Role, db, User
+from .logs import *
 
 users_bp = Blueprint('users', __name__)
 
@@ -11,7 +12,7 @@ users_bp = Blueprint('users', __name__)
 
 # Registrar un nuevo usuario
 @users_bp.route('/', methods=['POST'])
-@role_required(0, 1)# Solo usuarios con rol 0 o 1 pueden acceder
+#@role_required(0, 1)# Solo usuarios con rol 0 o 1 pueden acceder
 def add_user():  
     data = request.get_json()
     if not data or 'boleta' not in data or 'email' not in data or 'password' not in data:
@@ -72,9 +73,10 @@ def update_user(boleta):
     user = User.query.get(boleta)
     if user is None:
         return jsonify({"error": "Usuario no encontrado"}), 404
-
-    user.email = data.get('email', user.email)
-    user.nombre = data.get('nombre', user.nombre)
+    if 'email' in data:
+        user.email = data.get('email', user.email)
+    if 'nombre' in data:
+        user.nombre = data.get('nombre', user.nombre)
     if 'password' in data:
         user.password = generate_password_hash(data['password'])
     if 'role_id' in data:
@@ -95,12 +97,29 @@ def delete_user(boleta):
     db.session.commit()
     return jsonify({"message": "Usuario eliminado con éxito"}), 200
 
+#obtener los datos publicos del usuario autentificado
+@role_required(0, 1, 2, 3)
 @users_bp.route('/info', methods=['GET'])
 def info_user():
     user = current_user.query.get(current_user.boleta)
     if user is None:
+        log_api_request(
+        user_id=user,
+        operation='GET - Informacion',
+        container_name='ninguno',
+        object_name='ninguno',
+        status_code='404'
+        )
         return jsonify({"error": "Usuario no encontrado"}), 404
-    return jsonify({"name": user.get_name(),
-                    "email": user.get_email(),
-                    "id": user.get_id()
+    # Ejemplo de uso
+    log_api_request(
+        user_id=user,
+        operation='GET - Informacion',
+        container_name='ninguno',
+        object_name='ninguno',
+        status_code=200
+        )
+    return jsonify({"boleta": user.get_id(),
+                    "name": user.get_name(),
+                    "email": user.get_email()
                     }), 200
