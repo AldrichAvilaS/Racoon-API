@@ -15,4 +15,13 @@ def log_api_request(user_id, operation, container_name, object_name, status_code
     db.session.add(new_log)  # Agregar el nuevo log a la sesión
     db.session.commit()      # Confirmar la transacción
 
-
+def new_user_log(user, operation, status_code=None, error_message=None):
+    # Ejemplo de uso
+    log_api_request(
+        user_id=user,
+        operation=operation,
+        container_name='none',
+        object_name='none',
+        status_code=status_code,
+        error_message = error_message
+        )
