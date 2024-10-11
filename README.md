@@ -7,3 +7,4 @@ PyMySQL
 Flask-Security
 mysqlclient
 logging
+lask-cors

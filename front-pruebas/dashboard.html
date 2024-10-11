@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="dashboard-container">
+        <h2>Bienvenido al Dashboard</h2>
+
+        <button id="getUsersButton">Obtener Todos los Usuarios</button>
+        <button id="getUserButton">Obtener Usuario por Boleta</button>
+        <button id="updateUserButton">Actualizar Usuario</button>
+        <button id="deleteUserButton">Eliminar Usuario</button>
+        <button id="createUserButton">Crear Usuario</button>
+        <button id="checkAuthButton">Verificar Autenticación</button>
+        <button id="logoutButton">Cerrar Sesión</button>
+        
+        <div id="getUserForm" style="display: none;">
+            <h3>Obtener Usuario por Boleta</h3>
+            <input type="number" id="userBoleta" placeholder="Boleta" required>
+            <button id="submitGetUser">Obtener Usuario</button>
+            <p id="getUserMessage"></p>
+        </div>
+
+        <form id="updateUserForm" style="display: none;">
+            <h3>Actualizar Usuario</h3>
+            <input type="number" id="updateBoleta" placeholder="Boleta" required>
+            <input type="email" id="updateEmail" placeholder="Nuevo Email">
+            <input type="text" id="updateNombre" placeholder="Nuevo Nombre">
+            <input type="password" id="updatePassword" placeholder="Nueva Contraseña">
+            <input type="number" id="updateRoleId" placeholder="ID de Rol (opcional)">
+            <button id="submitUpdateUser">Actualizar Usuario</button>
+            <p id="updateUserMessage"></p>
+        </form>
+
+        <form id="deleteUserForm" style="display: none;">
+            <h3>Eliminar Usuario</h3>
+            <input type="number" id="deleteBoleta" placeholder="Boleta" required>
+            <button id="submitDeleteUser">Eliminar Usuario</button>
+            <p id="deleteUserMessage"></p>
+        </form>
+
+        <form id="createUserForm" style="display: none;">
+            <h3>Crear Nuevo Usuario</h3>
+            <input type="text" id="newBoleta" placeholder="Boleta" required>
+            <input type="email" id="newEmail" placeholder="Email" required>
+            <input type="password" id="newPassword" placeholder="Contraseña" required>
+            <input type="text" id="newNombre" placeholder="Nombre" required>
+            <input type="number" id="newRoleId" placeholder="ID de Rol (opcional)">
+            <button id="submitCreateUser">Crear Usuario</button>
+            <p id="createUserMessage"></p>
+        </form>
+
+        <p id="responseMessage"></p>
+        <p id="authMessage"></p> <!-- Para mostrar información de autenticación -->
+    </div>
+    <script src="dashboard.js"></script>
+</body>
+</html>

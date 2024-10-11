@@ -25,6 +25,8 @@ def login():
         return jsonify({"error": "Credenciales inválidas"}), 401
 
     login_user(user)  # Inicia sesión
+    print(f"Usuario {user.boleta} ha iniciado sesión.")  # Para depuración
+
     return jsonify({"message": "Inicio de sesión exitoso", 
                     "user_type": user.get_role()
                     }), 200

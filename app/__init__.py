@@ -1,6 +1,7 @@
 # app/__init__.py
 from flask import Flask
 from flask_login import LoginManager
+from flask_cors import CORS
 from .db import init_db, db, User
 
 # Importa y registra los Blueprints
@@ -11,7 +12,7 @@ login_manager = LoginManager()
 
 def create_app():
     app = Flask(__name__)
-
+    CORS(app, supports_credentials=True)  # Permite el uso de cookies
     # Configuración de la base de datos
     app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql://root:root@localhost/test'
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
@@ -20,6 +21,12 @@ def create_app():
     app.secret_key = 'd822d96ef56c589c3904a372381fa378'  # Cambia esto por una clave secreta única
 
 
+    app.config['SESSION_COOKIE_NAME'] = 'session'  # Cambia el nombre de la cookie
+    app.config['SESSION_COOKIE_HTTPONLY'] = True  # Evita que la cookie sea accesible mediante JavaScript
+    app.config['SESSION_COOKIE_SECURE'] = False  # Cambia a True si usas HTTPS
+    app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'  # Cambia a 'Strict' si quieres una mayor protección
+
+    
     # Inicializa la base de datos
     init_db(app)
 
