@@ -1,5 +1,5 @@
-from flask import Blueprint, request, jsonify
-from flask_login import current_user
+from flask import Blueprint, request, jsonify, session
+from flask_login import current_user, login_required
 from werkzeug.security import generate_password_hash
 from app.decorators import role_required  # Importar el decorador
 from sqlalchemy.exc import IntegrityError
@@ -118,17 +118,23 @@ def delete_user(boleta):
     return jsonify({"message": "Usuario eliminado con éxito"}), 200
 
 # Obtener los datos públicos del usuario autenticado
+@login_required
 @role_required(0, 1, 2, 3)
 @users_bp.route('/info', methods=['GET'])
 def info_user():
-    user = current_user  # Usa directamente current_user
-    if user is None:
-        new_user_log('Anonymous', 'GET - Información - Usuario no encontrado', error_message=404)
-        return jsonify({"error": "Usuario no encontrado"}), 404
-
-    new_user_log(user.get_id(), 'GET - Información', 200)
+    if current_user.is_authenticated:
+        user = current_user  # Usa directamente current_user
+        if user is None:
+            #new_user_log('Anonymous', 'GET - Información - Usuario no encontrado', error_message=404)
+            return jsonify({"error": "Usuario no encontrado"}), 404
+        print("sesion valida: ", session)
+        #new_user_log(user.get_id(), 'GET - Información', 200)
+        return jsonify({
+            "boleta": user.get_id(),
+            "name": user.nombre,  # Asegúrate de que tengas el atributo correcto
+            "email": user.email
+        }), 200
+    print("no hay sesion baboso")
     return jsonify({
-        "boleta": user.get_id(),
-        "name": user.nombre,  # Asegúrate de que tengas el atributo correcto
-        "email": user.email
-    }), 200
+            "message": "no hay sesion mijo"
+        }), 404
