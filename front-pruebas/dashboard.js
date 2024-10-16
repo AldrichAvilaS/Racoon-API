@@ -19,7 +19,7 @@ function toggleForm(formId) {
     const forms = ['createUserForm', 'getUserForm', 'updateUserForm', 'deleteUserForm'];
     forms.forEach(id => {
         const form = document.getElementById(id);
-        if (form) { // Asegúrate de que el formulario exista
+        if (form) {
             form.style.display = (id === formId) ? (form.style.display === 'none' ? 'block' : 'none') : 'none';
         }
     });
@@ -27,17 +27,19 @@ function toggleForm(formId) {
 
 // Funcionalidad para verificar la autenticación
 document.getElementById('checkAuthButton').addEventListener('click', async function () {
+    const token = localStorage.getItem('access_token');
+
     try {
         const response = await fetch('http://127.0.0.1:5000/users/info', {
             method: 'GET',
-            credentials: 'include',  // Incluye las cookies de sesión
             headers: {
                 'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`  // Agregar el token JWT al encabezado
             },
         });
 
         const data = await response.json();
-        document.getElementById('authMessage').innerText = response.ok ? 
+        document.getElementById('authMessage').innerText = response.ok ?
             `Usuario autenticado: ${JSON.stringify(data)}` : data.error;
     } catch (error) {
         console.error('Error:', error);
@@ -47,12 +49,14 @@ document.getElementById('checkAuthButton').addEventListener('click', async funct
 
 // Funcionalidad para obtener todos los usuarios
 document.getElementById('getUsersButton').addEventListener('click', async function () {
+    const token = localStorage.getItem('access_token');
+
     try {
         const response = await fetch('http://127.0.0.1:5000/users/', {
             method: 'GET',
-            credentials: 'include',  // Incluye las cookies de sesión
             headers: {
                 'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`  // Agregar el token JWT al encabezado
             },
         });
 
@@ -67,13 +71,14 @@ document.getElementById('getUsersButton').addEventListener('click', async functi
 // Funcionalidad para obtener un usuario por boleta
 document.getElementById('submitGetUser').addEventListener('click', async function () {
     const boleta = document.getElementById('userBoleta').value;
+    const token = localStorage.getItem('access_token');
 
     try {
         const response = await fetch(`http://127.0.0.1:5000/users/${boleta}`, {
             method: 'GET',
-            credentials: 'include',  // Incluye las cookies de sesión
             headers: {
                 'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`  // Agregar el token JWT al encabezado
             },
         });
 
@@ -92,6 +97,7 @@ document.getElementById('submitUpdateUser').addEventListener('click', async func
     const nombre = document.getElementById('updateNombre').value;
     const password = document.getElementById('updatePassword').value;
     const roleId = document.getElementById('updateRoleId').value;
+    const token = localStorage.getItem('access_token');
 
     // Crear el objeto de datos a enviar
     const dataToSend = {
@@ -104,9 +110,9 @@ document.getElementById('submitUpdateUser').addEventListener('click', async func
     try {
         const response = await fetch(`http://127.0.0.1:5000/users/${boleta}`, {
             method: 'PUT',
-            credentials: 'include',  // Incluye las cookies de sesión
             headers: {
                 'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`  // Agregar el token JWT al encabezado
             },
             body: JSON.stringify(dataToSend),
         });
@@ -127,13 +133,14 @@ document.getElementById('submitUpdateUser').addEventListener('click', async func
 // Funcionalidad para eliminar un usuario
 document.getElementById('submitDeleteUser').addEventListener('click', async function () {
     const boleta = document.getElementById('deleteBoleta').value;
+    const token = localStorage.getItem('access_token');
 
     try {
         const response = await fetch(`http://127.0.0.1:5000/users/${boleta}`, {
             method: 'DELETE',
-            credentials: 'include',  // Incluye las cookies de sesión
             headers: {
                 'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`  // Agregar el token JWT al encabezado
             },
         });
 
@@ -157,6 +164,7 @@ document.getElementById('submitCreateUser').addEventListener('click', async func
     const password = document.getElementById('newPassword').value;
     const nombre = document.getElementById('newNombre').value;
     const roleId = document.getElementById('newRoleId').value || null;
+    const token = localStorage.getItem('access_token');
 
     const dataToSend = {
         boleta,
@@ -169,9 +177,9 @@ document.getElementById('submitCreateUser').addEventListener('click', async func
     try {
         const response = await fetch('http://127.0.0.1:5000/users/', {
             method: 'POST',
-            credentials: 'include',  // Incluye las cookies de sesión
             headers: {
                 'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`  // Agregar el token JWT al encabezado
             },
             body: JSON.stringify(dataToSend),
         });
@@ -192,17 +200,11 @@ document.getElementById('submitCreateUser').addEventListener('click', async func
 // Funcionalidad para cerrar sesión
 document.getElementById('logoutButton').addEventListener('click', async function () {
     try {
-        const response = await fetch('http://127.0.0.1:5000/auth/logout', {
-            method: 'POST',
-            credentials: 'include',  // Incluye las cookies de sesión
-            headers: {
-                'Content-Type': 'application/json',
-            },
-        });
-
-        const data = await response.json();
-        document.getElementById('authMessage').innerText = data.message || data.error;
-        window.location.href = 'index.html'; // Redirige a la página de inicio de sesión
+        // Eliminar el token JWT del localStorage
+        localStorage.removeItem('access_token');
+        
+        // Redirigir a la página de inicio de sesión
+        window.location.href = 'index.html'; 
     } catch (error) {
         console.error('Error:', error);
         document.getElementById('authMessage').innerText = 'Error en la conexión con la API.';

@@ -1,5 +1,4 @@
 from flask_sqlalchemy import SQLAlchemy
-from flask_login import UserMixin
 
 # Inicializa la instancia de SQLAlchemy
 db = SQLAlchemy()
@@ -14,7 +13,7 @@ class Role(db.Model):
         return f'<Role {self.name}>'
 
 # Modelo de usuario
-class User(db.Model, UserMixin):
+class User(db.Model):
     boleta = db.Column(db.Integer, unique=True, primary_key=True)  # Cambiado para que boleta sea la clave primaria
     email = db.Column(db.String(120), unique=True, nullable=False)
     password = db.Column(db.String(200), nullable=False)

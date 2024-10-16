@@ -10,13 +10,15 @@ document.getElementById('loginForm').addEventListener('submit', async function (
             headers: {
                 'Content-Type': 'application/json',
             },
-            credentials: 'include',  // Incluye las credenciales para permitir las cookies
             body: JSON.stringify({ boleta, password }),
         });
 
         const data = await response.json();
 
         if (response.ok) {
+            // Guardar el token JWT en localStorage
+            localStorage.setItem('access_token', data.access_token);
+
             // Redirigir a la página del dashboard
             window.location.href = 'dashboard.html';
         } else {

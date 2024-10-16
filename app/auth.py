@@ -1,17 +1,10 @@
-from flask import Blueprint, request, jsonify, session
-from flask_login import LoginManager, login_user, logout_user, login_required, current_user
-from .db import User
+from flask import Blueprint, request, jsonify
+from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
 from werkzeug.security import check_password_hash
+from .db import User
+from datetime import timedelta
 
 auth_bp = Blueprint('auth', __name__)
-
-# Inicializa el LoginManager
-login_manager = LoginManager()
-
-# Cargar usuario
-@login_manager.user_loader
-def load_user(boleta):
-    return User.query.get(int(boleta))
 
 # Endpoint para iniciar sesión
 @auth_bp.route('/login', methods=['POST'])
@@ -24,35 +17,35 @@ def login():
     if user is None or not check_password_hash(user.password, data['password']):
         return jsonify({"error": "Credenciales inválidas"}), 401
 
-    
-    login_user(user)  # Inicia sesión
-    session.permanent = True
-    print(f"Usuario {user.boleta} ha iniciado sesión.")  # Para depuración
+    # Generar el token JWT
+    access_token = create_access_token(identity=user.boleta, expires_delta=timedelta(days=14))
 
-    return jsonify({"message": "ok", 
-                    "user_type": user.get_role()
-                    }), 200
+    return jsonify({
+        "message": "Inicio de sesión exitoso", 
+        "access_token": access_token,
+        "user_type": user.get_role()
+    }), 200
 
-# Endpoint para cerrar sesión
-@auth_bp.route('/logout', methods=['POST'])
-@login_required
-def logout():
-    #data = request.get_json()
-    #user = User.query.get(data['boleta'])
-    #print(f"Usuario {user.boleta} ha cerrado sesión.")  # Para depuración
-    print(session)
-    logout_user()  # Cierra sesión
-    print(f"Exitoso.")  # Para depuración
-    return jsonify({"message": "Cierre de sesión exitoso"}), 200
-
+# Endpoint para verificar si la sesión está activa
 @auth_bp.route('/verify-session', methods=['GET'])
+@jwt_required()  # Proteger con JWT
 def verify_session():
-    if current_user.is_authenticated:
+    current_boleta = get_jwt_identity()
+    user = User.query.get(current_boleta)
+    
+    if user:
         return jsonify({
             'authenticated': True,
-            'user_type': current_user.user_type  # O cualquier otro dato que necesites
+            'user_type': user.get_role()
         }), 200
     else:
         return jsonify({
             'authenticated': False
         }), 401
+
+# Endpoint para cerrar sesión
+@auth_bp.route('/logout', methods=['POST'])
+@jwt_required()
+def logout():
+    # No se requiere ninguna acción adicional en el servidor
+    return jsonify({"message": "Cierre de sesión exitoso"}), 200
