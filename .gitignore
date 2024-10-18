@@ -1,0 +1,11 @@
+
+*.pyc
+*.py
+*.mako
+/migrations
+/app/__pycache__
+/app/__pycache__
+*.pyc
+*.pyc
+/app/__pycache__
+/app/__pycache__

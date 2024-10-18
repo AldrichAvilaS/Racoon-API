@@ -2,12 +2,14 @@
 from flask import Flask
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager
+from flask_migrate import Migrate
 from datetime import timedelta
 from .db import init_db, db, User
 
 # Importa y registra los Blueprints
 from .users import users_bp
 from .auth import auth_bp
+from .file import file_bp
 
 def create_app():
     app = Flask(__name__)
@@ -17,10 +19,14 @@ def create_app():
     app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql://root:root@localhost/test'
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
+
+    app.config['MAX_CONTENT_LENGTH'] = 10 * 1024 * 1024 * 1024  # 1 GB
     # Establece la clave secreta para firmar JWT
     app.config['JWT_SECRET_KEY'] = 'd822d96ef56c589c3904a372381fa378'  # Cambia esto por una clave secreta única
     app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(days=14)  # Duración de los tokens
-
+    # Inicializa Migrate
+    migrate = Migrate(app, db)
+    
     # Inicializa la base de datos
     init_db(app)
 
@@ -30,5 +36,5 @@ def create_app():
     # Registra los blueprints
     app.register_blueprint(users_bp, url_prefix='/users')
     app.register_blueprint(auth_bp, url_prefix='/auth')
-
+    app.register_blueprint(file_bp, url_prefix='/file')
     return app

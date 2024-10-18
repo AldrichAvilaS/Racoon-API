@@ -1,5 +1,5 @@
 #logica de manejo de logs 
-#Version 0.1
+#Version 0.3
 from flask import Flask, request, jsonify
 from .db import Role, db, User, APILog
 

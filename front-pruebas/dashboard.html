@@ -16,6 +16,8 @@
         <button id="deleteUserButton">Eliminar Usuario</button>
         <button id="createUserButton">Crear Usuario</button>
         <button id="checkAuthButton">Verificar Autenticación</button>
+        <button id="uploadFileButton">Subir Archivo</button>
+        <button id="uploadMultipleFilesButton">Subir Múltiples Archivos</button>
         <button id="logoutButton">Cerrar Sesión</button>
         
         <div id="getUserForm" style="display: none;">
@@ -54,6 +56,25 @@
             <p id="createUserMessage"></p>
         </form>
 
+         <!-- Formulario para subir un solo archivo -->
+         <form id="uploadFileForm" style="display: none;">
+            <h3>Subir un Archivo</h3>
+            <input type="file" id="singleFile" required>
+            <input type="text" id="singleFileName" placeholder="Nombre del Archivo" required>
+            <input type="text" id="singleFilePath" placeholder="Ruta (opcional)">
+            <button type="button" id="submitUploadFile">Subir Archivo</button>
+            <p id="uploadFileMessage"></p>
+        </form>
+
+        <!-- Formulario para subir múltiples archivos -->
+        <form id="uploadMultipleFilesForm" style="display: none;">
+            <h3>Subir Múltiples Archivos</h3>
+            <input type="file" id="multipleFiles" multiple required>
+            <input type="text" id="multipleFilesPath" placeholder="Ruta (opcional)">
+            <button type="button" id="submitUploadMultipleFiles">Subir Archivos</button>
+            <p id="uploadMultipleFilesMessage"></p>
+        </form>
+        
         <p id="responseMessage"></p>
         <p id="authMessage"></p> <!-- Para mostrar información de autenticación -->
     </div>

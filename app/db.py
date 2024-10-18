@@ -19,9 +19,11 @@ class User(db.Model):
     password = db.Column(db.String(200), nullable=False)
     current_semester = db.Column(db.Integer, default=1)
     nombre = db.Column(db.String(100), nullable=False)
-    active = db.Column(db.Boolean, default=True)
+    active = db.Column(db.Boolean, default=False)
     confirmed_at = db.Column(db.DateTime)
-
+    storage_limit = db.Column(db.Integer)
+    delete_date = db.Column(db.DateTime)
+    
     # Llave foránea para el rol
     role_id = db.Column(db.Integer, db.ForeignKey('role.id'), nullable=False)
     role = db.relationship('Role', backref='users')  # Relación con Role
@@ -38,6 +40,45 @@ class User(db.Model):
         return self.email
     def get_name(self):
         return self.nombre
+
+
+class Subject(db.Model):
+    subject_id = db.Column(db.Integer, primary_key=True)
+    academy_id = db.Column(db.Integer, db.ForeignKey('academy.id'))  # Relación con Academy
+    subject_name = db.Column(db.String(100), nullable=False)
+    teacher_id = db.Column(db.Integer, db.ForeignKey('user.boleta'))  # Relación con User (profesor)
+    teacher = db.relationship('User', foreign_keys=[teacher_id], backref='subjects')  # Relación con el profesor
+    group_id = db.Column(db.Integer, db.ForeignKey('group.id'))  # Relación con Group
+    group = db.relationship('Group', backref='subjects')
+    description = db.Column(db.Text)
+    swift_scope = db.Column(db.String(255))
+
+
+class Enrollment(db.Model):
+    enrollment_id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.boleta'), nullable=False)
+    subject_id = db.Column(db.Integer, db.ForeignKey('subject.subject_id'), nullable=False)
+    enrollment_date = db.Column(db.DateTime, default=db.func.current_timestamp())
+    status = db.Column(db.String(50), nullable=False)
+
+class Academy(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    description = db.Column(db.Text)
+    main_teacher_id = db.Column(db.Integer, db.ForeignKey('user.boleta'))  # Llave foránea hacia User (profesor)
+    main_teacher = db.relationship('User', foreign_keys=[main_teacher_id], backref='academies')  # Relación con profesor
+
+class Group(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    semester = db.Column(db.Integer)
+    created_at = db.Column(db.DateTime, default=db.func.current_timestamp())
+    finished_at = db.Column(db.DateTime)
+
+class Notice(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    notice = db.Column(db.Text, nullable=False)
+    date_at_publish = db.Column(db.DateTime, default=db.func.current_timestamp())
+    date_at_finish = db.Column(db.DateTime)
 
 class APILog(db.Model):
     __tablename__ = 'api_logs'
