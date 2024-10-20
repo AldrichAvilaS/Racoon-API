@@ -13,5 +13,5 @@ pip install
     logging,
     marshmallow-sqlalchemy,
     PyMySQL,
-    virtualenv
+    flask_jwt_extended
 

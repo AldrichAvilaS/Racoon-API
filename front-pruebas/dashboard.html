@@ -1,11 +1,13 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard</title>
     <link rel="stylesheet" href="style.css">
 </head>
+
 <body>
     <div class="dashboard-container">
         <h2>Bienvenido al Dashboard</h2>
@@ -18,8 +20,9 @@
         <button id="checkAuthButton">Verificar Autenticación</button>
         <button id="uploadFileButton">Subir Archivo</button>
         <button id="uploadMultipleFilesButton">Subir Múltiples Archivos</button>
+        <button id="listFilesButton">Ver estructura de archivos</button>
         <button id="logoutButton">Cerrar Sesión</button>
-        
+
         <div id="getUserForm" style="display: none;">
             <h3>Obtener Usuario por Boleta</h3>
             <input type="number" id="userBoleta" placeholder="Boleta" required>
@@ -56,28 +59,46 @@
             <p id="createUserMessage"></p>
         </form>
 
-         <!-- Formulario para subir un solo archivo -->
-         <form id="uploadFileForm" style="display: none;">
+        <!-- Formulario para subir un solo archivo -->
+        <form id="uploadFileForm" style="display: none;">
             <h3>Subir un Archivo</h3>
-            <input type="file" id="singleFile" required>
-            <input type="text" id="singleFileName" placeholder="Nombre del Archivo" required>
+            <input type="file" id="singleFile" required> <!-- Campo para seleccionar un archivo -->
             <input type="text" id="singleFilePath" placeholder="Ruta (opcional)">
             <button type="button" id="submitUploadFile">Subir Archivo</button>
             <p id="uploadFileMessage"></p>
+
+            <!-- Barra de progreso para la carga de un archivo -->
+            <div id="progressContainer" style="display:none;">
+                <progress id="progressBar" value="0" max="100"></progress>
+                <span id="progressPercent">0%</span>
+            </div>
         </form>
 
         <!-- Formulario para subir múltiples archivos -->
         <form id="uploadMultipleFilesForm" style="display: none;">
             <h3>Subir Múltiples Archivos</h3>
-            <input type="file" id="multipleFiles" multiple required>
+            <input type="file" id="multipleFiles" multiple required> <!-- Soporte para múltiples archivos -->
             <input type="text" id="multipleFilesPath" placeholder="Ruta (opcional)">
             <button type="button" id="submitUploadMultipleFiles">Subir Archivos</button>
             <p id="uploadMultipleFilesMessage"></p>
+
+            <!-- Barra de progreso para la carga de múltiples archivos -->
+            <div id="progressContainerMultiple" style="display:none;">
+                <progress id="progressBarMultiple" value="0" max="100"></progress>
+                <span id="progressPercentMultiple">0%</span>
+            </div>
         </form>
-        
+        <!-- Contenedor para mostrar la estructura de archivos -->
+        <div id="fileStructureContainer">
+            <pre id="fileTree"></pre>
+        </div>
+
+
+
         <p id="responseMessage"></p>
         <p id="authMessage"></p> <!-- Para mostrar información de autenticación -->
     </div>
     <script src="dashboard.js"></script>
 </body>
+
 </html>

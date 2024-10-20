@@ -7,6 +7,44 @@ body {
     height: 100vh;
     margin: 0;
 }
+#message {
+    margin-top: 20px;
+    color: red;
+}
+.dashboard-container {
+    background: white;
+    padding: 20px;
+    border-radius: 5px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    text-align: center;
+}
+
+button {
+    margin: 10px;
+}
+
+#fileTree {
+    font-family: 'Courier New', monospace; /* Usamos una fuente monoespaciada para simular consola */
+    white-space: pre; /* Preservar espacios para las indentaciones */
+}
+
+#fileTree ul {
+    margin-left: 20px; /* Indentación para subdirectorios */
+    padding-left: 10px; /* Espaciado adicional para subdirectorios */
+}
+
+#fileTree li {
+    margin: 5px 0;
+}
+
+#fileStructureContainer {
+    background-color: #f9f9f9;
+    padding: 10px;
+    border: 1px solid #ccc;
+    margin-top: 10px;
+    max-height: 400px;
+    overflow-y: auto;
+}
 
 .login-container {
     background: white;
@@ -41,18 +79,3 @@ button:hover {
     background-color: #0056b3;
 }
 
-#message {
-    margin-top: 20px;
-    color: red;
-}
-.dashboard-container {
-    background: white;
-    padding: 20px;
-    border-radius: 5px;
-    box-shadow: 0 0 10px rgba(0,0,0,0.1);
-    text-align: center;
-}
-
-button {
-    margin: 10px;
-}

@@ -23,8 +23,12 @@ document.getElementById('uploadMultipleFilesButton').addEventListener('click', f
     toggleForm('uploadMultipleFilesForm');
 });
 
+document.getElementById('listFilesButton').addEventListener('click', function () {
+    toggleForm('fileStructureContainer');
+});
+
 function toggleForm(formId) {
-    const forms = ['createUserForm', 'getUserForm', 'updateUserForm', 'deleteUserForm', 'uploadFileForm', 'uploadMultipleFilesForm'];
+    const forms = ['createUserForm', 'getUserForm', 'updateUserForm', 'deleteUserForm', 'uploadFileForm', 'uploadMultipleFilesForm', 'fileStructureContainer'];
     forms.forEach(id => {
         const form = document.getElementById(id);
         if (form) {
@@ -212,90 +216,60 @@ document.getElementById('logoutButton').addEventListener('click', async function
     }
 });
 
-// Función para convertir archivos en base64
-function toBase64(file) {
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result.split(',')[1]);  // Devuelve solo la parte base64
-        reader.onerror = error => reject(error);
-        reader.readAsDataURL(file);
-    });
-}
+// Función para generar el árbol de carpetas y archivos
+function createFileTree(structure, parentElement) {
+    const ul = document.createElement('ul');
 
-// Subir un archivo
-document.getElementById('submitUploadFile').addEventListener('click', async function () {
-    const file = document.getElementById('singleFile').files[0];
-    const fileName = document.getElementById('singleFileName').value;
-    const filePath = document.getElementById('singleFilePath').value || '';
-    console.log("unico elemento");
-    if (!file) {
-        document.getElementById('uploadFileMessage').innerText = 'Selecciona un archivo.';
-        return;
-    }
+    for (const key in structure) {
+        const li = document.createElement('li');
 
-    try {
-        const token = localStorage.getItem('access_token');
-        const fileBase64 = await toBase64(file);  // Convertir el archivo a base64
-
-        const response = await fetch('http://127.0.0.1:5000/file/upload/single', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`,
-            },
-            body: JSON.stringify({
-                file: fileBase64,
-                filename: fileName,
-                path: filePath
-            }),
-        });
-
-        const data = await response.json();
-        document.getElementById('uploadFileMessage').innerText = data.message || data.error;
-    } catch (error) {
-        console.error('Error:', error);
-        document.getElementById('uploadFileMessage').innerText = 'Error al subir el archivo.';
-    }
-});
-
-// Subir múltiples archivos
-document.getElementById('submitUploadMultipleFiles').addEventListener('click', async function () {
-    const files = document.getElementById('multipleFiles').files;
-    const filePath = document.getElementById('multipleFilesPath').value || '';
-
-    if (files.length === 0) {
-        document.getElementById('uploadMultipleFilesMessage').innerText = 'Selecciona archivos.';
-        return;
-    }
-
-    try {
-        const token = localStorage.getItem('access_token');
-        const fileArray = [];
-
-        for (let file of files) {
-            const fileBase64 = await toBase64(file);  // Convertir el archivo a base64
-            fileArray.push({
-                file: fileBase64,
-                filename: file.name
-            });
+        if (typeof structure[key] === 'object') {
+            // Si es una carpeta
+            li.innerHTML = `<strong>${key}/</strong>`;
+            const subUl = createFileTree(structure[key], li);
+            li.appendChild(subUl);
+        } else {
+            // Si es un archivo
+            li.innerHTML = `${key}`;
         }
 
-        const response = await fetch('http://127.0.0.1:5000/file/upload/lot', {
-            method: 'POST',
+        ul.appendChild(li);
+    }
+
+    return ul;
+}
+
+// Mostrar la estructura de archivos al hacer clic en el botón
+document.getElementById('listFilesButton').addEventListener('click', async function () {
+    const token = localStorage.getItem('access_token');
+
+    try {
+        const response = await fetch('http://127.0.0.1:5000/file/list', {
+            method: 'GET',
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`,
+                'Authorization': `Bearer ${token}`  // Agregar el token JWT al encabezado
             },
-            body: JSON.stringify({
-                files: fileArray,
-                path: filePath
-            }),
         });
 
         const data = await response.json();
-        document.getElementById('uploadMultipleFilesMessage').innerText = data.message || data.error;
+
+        if (response.ok) {
+            // Limpiar el contenedor anterior
+            const fileTreeContainer = document.getElementById('fileTree');
+            fileTreeContainer.innerHTML = '';
+
+            // Crear el árbol de archivos y carpetas
+            const fileTree = createFileTree(data.structure, fileTreeContainer);
+            fileTreeContainer.appendChild(fileTree);
+            document.getElementById('fileStructureContainer').style.display = 'block';
+        } else {
+            document.getElementById('fileTree').innerText = data.error || 'Error al obtener la estructura de archivos.';
+            document.getElementById('fileStructureContainer').style.display = 'block';
+        }
     } catch (error) {
         console.error('Error:', error);
-        document.getElementById('uploadMultipleFilesMessage').innerText = 'Error al subir los archivos.';
+        document.getElementById('fileTree').innerText = 'Error en la conexión con la API.';
+        document.getElementById('fileStructureContainer').style.display = 'block';
     }
 });
