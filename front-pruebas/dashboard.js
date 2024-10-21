@@ -216,6 +216,247 @@ document.getElementById('logoutButton').addEventListener('click', async function
     }
 });
 
+// Función para convertir archivos en base64
+function toBase64(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result.split(',')[1]);  // Devuelve solo la parte base64
+        reader.onerror = error => reject(error);
+        reader.readAsDataURL(file);
+    });
+}
+
+// Función para determinar el endpoint basado en el tamaño del archivo
+function getEndpointByFileSize(fileSize) {
+    const MAX_SIZE_SINGLE = 350 * 1024 * 1024; // 350 MB en bytes
+    if (fileSize > MAX_SIZE_SINGLE) {
+        return 'chunk';  // Si el archivo es mayor a 350 MB, se envía al endpoint de chunks
+    }
+    return 'single';  // Si el archivo es menor o igual a 350 MB, se envía al endpoint estándar
+}
+
+// Subir un archivo con barra de progreso y decisión de endpoint
+document.getElementById('submitUploadFile').addEventListener('click', async function () {
+    const file = document.getElementById('singleFile').files[0];
+    const filePath = document.getElementById('singleFilePath').value || '';
+
+    if (!file) {
+        document.getElementById('uploadFileMessage').innerText = 'Selecciona un archivo.';
+        return;
+    }
+
+    const fileName = file.name;
+    const fileSize = file.size;
+
+    const endpointType = getEndpointByFileSize(fileSize);
+
+    const progressContainer = document.getElementById('progressContainer');
+    const progressBar = document.getElementById('progressBar');
+    const progressPercent = document.getElementById('progressPercent');
+    progressContainer.style.display = 'block';
+    progressBar.value = 0;
+    progressPercent.innerText = '0%';
+
+    try {
+        const token = localStorage.getItem('access_token');
+
+        if (endpointType === 'single') {
+            const fileBase64 = await toBase64(file);
+
+            const xhr = new XMLHttpRequest();
+            xhr.open('POST', 'http://127.0.0.1:5000/file/upload/single', true);
+            xhr.setRequestHeader('Content-Type', 'application/json');
+            xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+
+            xhr.upload.onprogress = function (event) {
+                if (event.lengthComputable) {
+                    const percentComplete = (event.loaded / event.total) * 100;
+                    progressBar.value = percentComplete;
+                    progressPercent.innerText = `${Math.round(percentComplete)}%`;
+                }
+            };
+
+            xhr.onload = function () {
+                const response = JSON.parse(xhr.responseText);
+                if (xhr.status === 200) {
+                    document.getElementById('uploadFileMessage').innerText = response.message || 'Archivo subido correctamente.';
+                } else {
+                    document.getElementById('uploadFileMessage').innerText = response.error || 'Error al subir el archivo.';
+                }
+                progressContainer.style.display = 'none';
+            };
+
+            const jsonData = JSON.stringify({
+                file: fileBase64,
+                filename: fileName,
+                path: filePath
+            });
+            xhr.send(jsonData);
+
+        } else if (endpointType === 'chunk') {
+            // Enviar el archivo en chunks secuenciales
+            const CHUNK_SIZE = 5 * 1024 * 1024;  // 5 MB por chunk
+            const totalChunks = Math.ceil(fileSize / CHUNK_SIZE);
+
+            for (let chunkIndex = 0; chunkIndex < totalChunks; chunkIndex++) {
+                const start = chunkIndex * CHUNK_SIZE;
+                const end = Math.min(fileSize, start + CHUNK_SIZE);
+                const chunk = file.slice(start, end);
+
+                const chunkData = await chunk.arrayBuffer();
+
+                const result = await sendChunk(chunkData, chunkIndex, totalChunks, fileName, filePath, token);
+
+                if (!result.success) {
+                    document.getElementById('uploadFileMessage').innerText = `Error al subir chunk ${chunkIndex + 1}: ${result.error}`;
+                    progressContainer.style.display = 'none';
+                    break;
+                }
+
+                // Actualizar barra de progreso
+                const percentComplete = ((chunkIndex + 1) / totalChunks) * 100;
+                progressBar.value = percentComplete;
+                progressPercent.innerText = `${Math.round(percentComplete)}%`;
+            }
+        }
+
+    } catch (error) {
+        console.error('Error al subir el archivo:', error);
+        document.getElementById('uploadFileMessage').innerText = 'Error al subir el archivo.';
+    }
+});
+
+// Función para enviar un chunk al servidor
+async function sendChunk(chunkData, chunkIndex, totalChunks, fileName, filePath, token) {
+    return new Promise((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open('POST', 'http://127.0.0.1:5000/file/upload/chunk', true);
+        xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+        xhr.setRequestHeader('X-Chunk-Index', chunkIndex);
+        xhr.setRequestHeader('X-Total-Chunks', totalChunks);
+        xhr.setRequestHeader('X-File-Name', fileName);
+        xhr.setRequestHeader('X-File-Path', filePath);
+
+        xhr.onload = function () {
+            if (xhr.status === 200) {
+                const response = JSON.parse(xhr.responseText);
+                console.log(`Chunk ${chunkIndex + 1} subido con éxito`, response);
+                resolve({ success: true });
+            } else {
+                const response = JSON.parse(xhr.responseText);
+                console.error(`Error al subir chunk ${chunkIndex + 1}`, response);
+                resolve({ success: false, error: response.error });
+            }
+        };
+
+        xhr.onerror = function () {
+            console.error(`Error al enviar chunk ${chunkIndex + 1}`);
+            resolve({ success: false, error: 'Error de conexión con el servidor' });
+        };
+
+        // Enviar el chunk como binario
+        xhr.send(chunkData);
+    });
+}
+
+// Subir múltiples archivos con barra de progreso y decisión de endpoint
+document.getElementById('submitUploadMultipleFiles').addEventListener('click', async function () {
+    const files = document.getElementById('multipleFiles').files;
+    const filePath = document.getElementById('multipleFilesPath').value || '';
+
+    if (files.length === 0) {
+        document.getElementById('uploadMultipleFilesMessage').innerText = 'Selecciona archivos.';
+        return;
+    }
+
+    const progressContainer = document.getElementById('progressContainerMultiple');
+    const progressBar = document.getElementById('progressBarMultiple');
+    const progressPercent = document.getElementById('progressPercentMultiple');
+    progressContainer.style.display = 'block';
+    progressBar.value = 0;
+    progressPercent.innerText = '0%';
+
+    try {
+        const token = localStorage.getItem('access_token');
+
+        for (let i = 0; i < files.length; i++) {
+            const file = files[i];
+            const fileName = file.name;
+            const fileSize = file.size;
+
+            // Decidir el endpoint según el tamaño del archivo
+            const endpointType = getEndpointByFileSize(fileSize);
+
+            if (endpointType === 'single') {
+                // Convertir el archivo a base64
+                const fileBase64 = await toBase64(file);
+
+                const xhr = new XMLHttpRequest();
+                xhr.open('POST', 'http://127.0.0.1:5000/file/upload/lot', true);
+                xhr.setRequestHeader('Content-Type', 'application/json');
+                xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+
+                // Progreso de carga
+                xhr.upload.onprogress = function (event) {
+                    if (event.lengthComputable) {
+                        const percentComplete = (event.loaded / event.total) * 100;
+                        progressBar.value = percentComplete;
+                        progressPercent.innerText = `${Math.round(percentComplete)}%`;
+                    }
+                };
+
+                // Evento cuando la carga se completa
+                xhr.onload = function () {
+                    const response = JSON.parse(xhr.responseText);
+                    if (xhr.status === 200) {
+                        document.getElementById('uploadMultipleFilesMessage').innerText = response.message || 'Archivos subidos correctamente.';
+                    } else {
+                        document.getElementById('uploadMultipleFilesMessage').innerText = response.error || 'Error al subir los archivos.';
+                    }
+                    progressContainer.style.display = 'none';
+                };
+
+                // Enviar la solicitud con el archivo base64
+                const jsonData = JSON.stringify({
+                    files: [{ file: fileBase64, filename: fileName }],
+                    path: filePath
+                });
+                xhr.send(jsonData);
+
+            } else if (endpointType === 'chunk') {
+                // Enviar el archivo en chunks si es mayor de 350 MB
+                const CHUNK_SIZE = 5 * 1024 * 1024;  // 5 MB por chunk
+                const totalChunks = Math.ceil(fileSize / CHUNK_SIZE);
+
+                for (let chunkIndex = 0; chunkIndex < totalChunks; chunkIndex++) {
+                    const start = chunkIndex * CHUNK_SIZE;
+                    const end = Math.min(fileSize, start + CHUNK_SIZE);
+                    const chunk = file.slice(start, end);
+
+                    const chunkData = await chunk.arrayBuffer();
+
+                    const result = await sendChunk(chunkData, chunkIndex, totalChunks, fileName, filePath, token);
+
+                    if (!result.success) {
+                        document.getElementById('uploadMultipleFilesMessage').innerText = `Error al subir chunk ${chunkIndex + 1}: ${result.error}`;
+                        progressContainer.style.display = 'none';
+                        break;
+                    }
+
+                    // Actualizar barra de progreso
+                    const percentComplete = ((chunkIndex + 1) / totalChunks) * 100;
+                    progressBar.value = percentComplete;
+                    progressPercent.innerText = `${Math.round(percentComplete)}%`;
+                }
+            }
+        }
+
+    } catch (error) {
+        console.error('Error al subir los archivos:', error);
+        document.getElementById('uploadMultipleFilesMessage').innerText = 'Error al subir los archivos.';
+    }
+});
+
 // Función para generar el árbol de carpetas y archivos
 function createFileTree(structure, parentElement) {
     const ul = document.createElement('ul');
@@ -239,6 +480,64 @@ function createFileTree(structure, parentElement) {
     return ul;
 }
 
+
+
+// Función para crear el árbol de archivos y carpetas recursivamente
+function createFileTree(structure, container) {
+    // Recorremos las claves del objeto de estructura (carpetas)
+    for (const [folder, content] of Object.entries(structure)) {
+        // Crear un contenedor para la carpeta o raíz
+        const folderElement = document.createElement('div');
+        folderElement.classList.add('folder'); // Clase para el estilo
+
+        // Si el folder es la raíz (''), ponemos "Raíz del directorio"
+        if (folder === '') {
+            folderElement.textContent = 'Raíz del directorio';
+        } else {
+            folderElement.textContent = folder; // Nombre de la carpeta
+        }
+
+        // Crear un contenedor para el contenido de la carpeta
+        const folderContent = document.createElement('div');
+        folderContent.classList.add('folder-content');
+
+        // Recorrer las subcarpetas
+        if (content.folders.length > 0) {
+            const subFolderList = document.createElement('ul');
+            content.folders.forEach(subFolder => {
+                const subFolderItem = document.createElement('li');
+                subFolderItem.textContent = subFolder;
+                subFolderList.appendChild(subFolderItem);
+            });
+            folderContent.appendChild(subFolderList);
+        }
+
+        // Recorrer los archivos
+        if (content.files.length > 0) {
+            const fileList = document.createElement('ul');
+            content.files.forEach(file => {
+                const fileItem = document.createElement('li');
+                fileItem.textContent = file;
+                fileList.appendChild(fileItem);
+            });
+            folderContent.appendChild(fileList);
+        }
+
+        // Colapsar el contenido de la carpeta al hacer clic
+        folderElement.addEventListener('click', () => {
+            folderContent.style.display =
+                folderContent.style.display === 'none' ? 'block' : 'none';
+        });
+
+        // Por defecto, esconder el contenido de las carpetas
+        folderContent.style.display = 'none';
+
+        // Agregar la carpeta y su contenido al contenedor principal
+        container.appendChild(folderElement);
+        container.appendChild(folderContent);
+    }
+}
+
 // Mostrar la estructura de archivos al hacer clic en el botón
 document.getElementById('listFilesButton').addEventListener('click', async function () {
     const token = localStorage.getItem('access_token');
@@ -260,8 +559,7 @@ document.getElementById('listFilesButton').addEventListener('click', async funct
             fileTreeContainer.innerHTML = '';
 
             // Crear el árbol de archivos y carpetas
-            const fileTree = createFileTree(data.structure, fileTreeContainer);
-            fileTreeContainer.appendChild(fileTree);
+            createFileTree(data.structure, fileTreeContainer);
             document.getElementById('fileStructureContainer').style.display = 'block';
         } else {
             document.getElementById('fileTree').innerText = data.error || 'Error al obtener la estructura de archivos.';
