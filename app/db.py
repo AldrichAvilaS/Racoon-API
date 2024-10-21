@@ -90,9 +90,46 @@ class APILog(db.Model):
     status_code = db.Column(db.Integer, nullable=False)                # Código de estado HTTP
     timestamp = db.Column(db.DateTime, default=db.func.current_timestamp())  # Marca de tiempo    status_code = db.Column(db.Integer, nullable=False)                # Código de estado HTTP
     error_message = db.Column(db.Text)                                 # Mensaje de error, si lo hay
+from werkzeug.security import generate_password_hash
 
+# Función para agregar roles y usuarios por defecto
+def insert_default_data():
+    # Verifica si ya existen roles en la tabla
+    if Role.query.count() == 0:
+        # Definir roles por defecto
+        admin_role = Role(id=0 ,name='Administrador', description='Funciones de Administrador')
+        Academy_role = Role(id=1 ,name='Academia', description='Funciones de Academia ')
+        Teacher_role = Role(id=2 ,name='Profesor', description='Funciones de Profesor')
+        Student_role = Role(id=3 ,name='Estudiante', description='Funciones de estudiante')
+
+        db.session.add(admin_role)
+        db.session.add(Academy_role)
+        db.session.add(Teacher_role)
+        db.session.add(Student_role)
+        
+        db.session.commit()
+
+        print("Roles por defecto creados: Administrador, academia, profesor y estudiante")
+
+    # Verifica si ya existe un usuario administrador
+    if User.query.count() == 0:
+        # Crear un usuario por defecto con el rol de administrador
+        admin_user = User(
+            boleta=2019300397,  # Puedes cambiar este ID por defecto
+            email='aldrich@racoon.com',
+            password=generate_password_hash('root'),  # Asegúrate de cambiar la contraseña por defecto
+            nombre='Aldrich Avila',
+            role_id=Role.query.filter_by(id=0).first().id  # Asignar el rol de administrador
+        )
+        
+        db.session.add(admin_user)
+        db.session.commit()
+
+        print("Usuario administrador por defecto creado: aldrich@racoon.com")
+        
 def init_db(app):
     """Inicializa la base de datos con la aplicación."""
     db.init_app(app)
     with app.app_context():
         db.create_all()  # Crea las tablas en la base de datos
+        insert_default_data()  # Inserta roles y usuarios por defecto si no existen

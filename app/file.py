@@ -1,10 +1,13 @@
 # lógica de manejo de archivos
 # Versión 0.4 - Proporcionar directorios y rutas
+from io import BytesIO
 import os, base64, hashlib
-from flask import Blueprint, request, jsonify
+import zipfile
+import shutil
+from flask import Blueprint, request, jsonify, send_file, abort
 from pathlib import Path
 from flask_jwt_extended import get_jwt_identity, jwt_required
-from .db import db, User, APILog
+from .db import User
 from .path import store_path
 from .logs import log_api_request
 
@@ -247,7 +250,73 @@ def list_files_and_folders():
     try:
         # Obtener la estructura de archivos y carpetas
         directory_structure = get_directory_structure(user_directory)
-        print(directory_structure)
+        #print(directory_structure)
         return jsonify({"message": "Estructura obtenida correctamente", "structure": directory_structure}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+    
+# Ruta para descargar un archivo
+@file_bp.route('/download', methods=['GET'])
+@jwt_required()  # Proteger con JWT
+def download_file():
+    current_boleta = get_jwt_identity()
+    user = User.query.get(current_boleta)
+    
+    # Recibir la ruta del archivo a descargar desde el front
+    file_path = request.args.get('file_path')
+    
+    if not file_path:
+        return jsonify({"error": "No se proporcionó la ruta del archivo"}), 400
+    
+    # Generar la ruta completa donde se encuentra el archivo del usuario
+    full_path = os.path.join(store_path, str(user.get_boleta()), file_path)
+    
+    # Verificar si el archivo existe
+    if not os.path.exists(full_path):
+        return jsonify({"error": "El archivo no existe"}), 404
+    
+    try:
+        # Usar send_file para enviar el archivo al cliente
+        return send_file(full_path, as_attachment=True)
+    except Exception as e:
+        return jsonify({"error": f"Error al descargar el archivo: {str(e)}"}), 500
+
+# Ruta para descargar una carpeta como ZIP
+@file_bp.route('/download-folder', methods=['GET'])
+@jwt_required()  # Proteger con JWT
+def download_folder():
+    current_boleta = get_jwt_identity()
+    user = User.query.get(current_boleta)
+    
+    # Recibir la ruta de la carpeta que se desea comprimir
+    folder_path = request.args.get('folder_path')
+    
+    if not folder_path:
+        return jsonify({"error": "No se proporcionó la ruta de la carpeta"}), 400
+
+    # Generar la ruta completa donde se encuentra la carpeta del usuario
+    full_folder_path = os.path.join(store_path, str(user.get_boleta()), folder_path)
+    
+    # Verificar si la carpeta existe
+    if not os.path.exists(full_folder_path):
+        return jsonify({"error": "La carpeta no existe"}), 404
+
+    try:
+        # Crear un archivo ZIP en memoria
+        memory_file = BytesIO()
+        with zipfile.ZipFile(memory_file, 'w', zipfile.ZIP_DEFLATED) as zf:
+            # Recorrer todos los archivos dentro de la carpeta y agregarlos al ZIP
+            for root, dirs, files in os.walk(full_folder_path):
+                for file in files:
+                    full_file_path = os.path.join(root, file)
+                    arcname = os.path.relpath(full_file_path, full_folder_path)
+                    zf.write(full_file_path, arcname)
+
+        memory_file.seek(0)  # Mover el puntero al inicio del archivo ZIP en memoria
+        
+        # Enviar el archivo ZIP generado al cliente
+        zip_filename = f"{os.path.basename(full_folder_path)}.zip"
+        return send_file(memory_file, as_attachment=True, download_name=zip_filename)
+
+    except Exception as e:
+        return jsonify({"error": f"Error al comprimir la carpeta: {str(e)}"}), 500

@@ -93,6 +93,27 @@
             <pre id="fileTree"></pre>
         </div>
 
+        <!-- Formulario para descargar un archivo -->
+        <div id="downloadFileForm" style="display: none;">
+            <h3>Descargar un Archivo</h3>
+            <input type="text" id="fileToDownload" placeholder="Ruta del archivo a descargar" required>
+            <button type="button" id="submitDownloadFile">Descargar Archivo</button>
+            <p id="downloadFileMessage"></p>
+        </div>
+
+        <!-- Formulario para descargar una carpeta como ZIP -->
+        <div id="downloadFolderForm" style="display: none;">
+            <h3>Descargar Carpeta como ZIP</h3>
+            <input type="text" id="folderToDownload" placeholder="Ruta de la carpeta a descargar" required>
+            <button type="button" id="submitDownloadFolder">Descargar Carpeta</button>
+            <p id="downloadFolderMessage"></p>
+        </div>
+        
+        <div id="loadingSpinner" style="display: none;">
+            <p>Procesando la descarga... Esto puede tardar unos momentos.</p>
+            <div class="spinner"></div>
+        </div>
+
 
 
         <p id="responseMessage"></p>

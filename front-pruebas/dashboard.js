@@ -28,14 +28,16 @@ document.getElementById('listFilesButton').addEventListener('click', function ()
 });
 
 function toggleForm(formId) {
-    const forms = ['createUserForm', 'getUserForm', 'updateUserForm', 'deleteUserForm', 'uploadFileForm', 'uploadMultipleFilesForm', 'fileStructureContainer'];
+    const forms = ['createUserForm', 'getUserForm', 'updateUserForm', 'deleteUserForm', 'uploadFileForm', 'uploadMultipleFilesForm', 'fileStructureContainer', 'downloadFileForm', 'downloadFolderForm'];
     forms.forEach(id => {
         const form = document.getElementById(id);
         if (form) {
-            form.style.display = (id === formId) ? (form.style.display === 'none' ? 'block' : 'none') : 'none';
+            // Solo ocultar si no es el formulario que queremos mostrar
+            form.style.display = (id === formId) ? 'block' : 'none';
         }
     });
 }
+
 
 // Funcionalidad para verificar la autenticación
 document.getElementById('checkAuthButton').addEventListener('click', async function () {
@@ -481,25 +483,52 @@ function createFileTree(structure, parentElement) {
 }
 
 
-
-// Función para crear el árbol de archivos y carpetas recursivamente
 function createFileTree(structure, container) {
-    // Recorremos las claves del objeto de estructura (carpetas)
     for (const [folder, content] of Object.entries(structure)) {
-        // Crear un contenedor para la carpeta o raíz
         const folderElement = document.createElement('div');
-        folderElement.classList.add('folder'); // Clase para el estilo
+        folderElement.classList.add('folder');
 
-        // Si el folder es la raíz (''), ponemos "Raíz del directorio"
-        if (folder === '') {
-            folderElement.textContent = 'Raíz del directorio';
-        } else {
-            folderElement.textContent = folder; // Nombre de la carpeta
-        }
+        // Crear un contenedor solo para el nombre de la carpeta que maneje la expansión/colapso
+        const folderHeader = document.createElement('div');
+        folderHeader.style.display = 'inline-block';  // Esto permite que el nombre sea clicable sin afectar al botón
 
-        // Crear un contenedor para el contenido de la carpeta
+        const folderName = document.createElement('span');
+        folderName.textContent = (folder === '') ? 'Raíz del directorio' : folder;
+        folderName.style.cursor = 'pointer';
+
+        // Agregar el evento para expandir/colapsar la carpeta al hacer clic en el nombre de la carpeta
+        folderName.addEventListener('click', function () {
+            const folderContent = folderElement.querySelector('.folder-content');
+            folderContent.style.display = folderContent.style.display === 'none' ? 'block' : 'none';
+        });
+
+        // Añadir el nombre de la carpeta al contenedor que maneja la expansión/colapso
+        folderHeader.appendChild(folderName);
+
+        // Crear el botón de descarga de la carpeta, completamente separado
+        const downloadButton = document.createElement('button');
+        downloadButton.textContent = 'Descargar';
+        downloadButton.style.marginLeft = '15px';
+
+        // Evento del botón de descarga para evitar cualquier colapso o expansión
+        downloadButton.addEventListener('click', function (event) {
+            event.preventDefault();
+            event.stopPropagation(); // Evitar que el clic cause colapso/expansión
+
+            // Asignar la ruta de la carpeta al campo del formulario de descarga
+            document.getElementById('folderToDownload').value = folder;
+
+            // Mostrar el formulario de descarga de la carpeta
+            toggleForm('downloadFolderForm');
+
+            // Mostrar un mensaje temporal de que la carpeta se ha seleccionado para descargar
+            console.log("Carpeta seleccionada para descargar: " + folder);
+        });
+
+        // Crear un contenedor para el contenido de la carpeta (archivos y subcarpetas)
         const folderContent = document.createElement('div');
         folderContent.classList.add('folder-content');
+        folderContent.style.display = 'none';  // Ocultar inicialmente
 
         // Recorrer las subcarpetas
         if (content.folders.length > 0) {
@@ -518,25 +547,29 @@ function createFileTree(structure, container) {
             content.files.forEach(file => {
                 const fileItem = document.createElement('li');
                 fileItem.textContent = file;
+
+                fileItem.addEventListener('click', function () {
+                    document.getElementById('fileToDownload').value = file;
+                    toggleForm('downloadFileForm');  // Mostrar el formulario de descarga de archivos
+                });
+
                 fileList.appendChild(fileItem);
             });
             folderContent.appendChild(fileList);
         }
 
-        // Colapsar el contenido de la carpeta al hacer clic
-        folderElement.addEventListener('click', () => {
-            folderContent.style.display =
-                folderContent.style.display === 'none' ? 'block' : 'none';
-        });
+        // Añadir el nombre de la carpeta (expansión/colapso) y el botón de descarga como hermanos
+        const folderRow = document.createElement('div');
+        folderRow.appendChild(folderHeader);  // Nombre de la carpeta (maneja la expansión)
+        folderRow.appendChild(downloadButton);  // Botón de descarga (completamente independiente)
 
-        // Por defecto, esconder el contenido de las carpetas
-        folderContent.style.display = 'none';
-
-        // Agregar la carpeta y su contenido al contenedor principal
+        // Añadir el contenedor de la carpeta y su contenido al contenedor principal
+        folderElement.appendChild(folderRow);  // Añadir ambos elementos a la fila
+        folderElement.appendChild(folderContent);  // Añadir el contenido de la carpeta
         container.appendChild(folderElement);
-        container.appendChild(folderContent);
     }
 }
+
 
 // Mostrar la estructura de archivos al hacer clic en el botón
 document.getElementById('listFilesButton').addEventListener('click', async function () {
@@ -569,5 +602,87 @@ document.getElementById('listFilesButton').addEventListener('click', async funct
         console.error('Error:', error);
         document.getElementById('fileTree').innerText = 'Error en la conexión con la API.';
         document.getElementById('fileStructureContainer').style.display = 'block';
+    }
+});
+
+// Funcionalidad para descargar un archivo
+document.getElementById('submitDownloadFile').addEventListener('click', async function () {
+    const filePath = document.getElementById('fileToDownload').value;
+    const token = localStorage.getItem('access_token');
+
+    if (!filePath) {
+        document.getElementById('downloadFileMessage').innerText = 'Por favor, ingresa la ruta del archivo.';
+        return;
+    }
+
+    try {
+        const response = await fetch(`http://127.0.0.1:5000/file/download?file_path=${encodeURIComponent(filePath)}`, {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${token}`  // Incluir el token JWT
+            }
+        });
+
+        if (response.ok) {
+            const blob = await response.blob();  // Convierte la respuesta en un blob para descargar
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filePath.split('/').pop();  // Asigna el nombre del archivo a descargar
+            document.body.appendChild(a);
+            a.click();  // Simula el clic para descargar el archivo
+            a.remove();  // Elimina el enlace una vez descargado
+            document.getElementById('downloadFileMessage').innerText = 'Archivo descargado correctamente.';
+        } else {
+            const errorData = await response.json();
+            document.getElementById('downloadFileMessage').innerText = errorData.error || 'Error al descargar el archivo.';
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        document.getElementById('downloadFileMessage').innerText = 'Error al descargar el archivo.';
+    }
+});
+
+// Funcionalidad para descargar una carpeta como ZIP
+document.getElementById('submitDownloadFolder').addEventListener('click', async function () {
+    const folderPath = document.getElementById('folderToDownload').value;
+    const token = localStorage.getItem('access_token');
+
+    if (!folderPath) {
+        document.getElementById('downloadFolderMessage').innerText = 'Por favor, ingresa la ruta de la carpeta.';
+        return;
+    }
+
+    try {
+        // Mostrar el spinner durante el procesamiento
+        document.getElementById('loadingSpinner').style.display = 'block';
+
+        const response = await fetch(`http://127.0.0.1:5000/file/download-folder?folder_path=${encodeURIComponent(folderPath)}`, {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${token}`  // Incluir el token JWT
+            }
+        });
+
+        if (response.ok) {
+            const blob = await response.blob();  // Convierte la respuesta en un blob para descargar
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${folderPath.split('/').pop()}.zip`;  // Nombre del archivo ZIP descargado
+            document.body.appendChild(a);
+            a.click();  // Simula el clic para descargar el archivo ZIP
+            a.remove();  // Elimina el enlace una vez descargado
+            document.getElementById('downloadFolderMessage').innerText = 'Carpeta descargada correctamente.';
+        } else {
+            const errorData = await response.json();
+            document.getElementById('downloadFolderMessage').innerText = errorData.error || 'Error al descargar la carpeta.';
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        document.getElementById('downloadFolderMessage').innerText = 'Error al descargar la carpeta.';
+    } finally {
+        // Ocultar el spinner cuando termine el proceso
+        document.getElementById('loadingSpinner').style.display = 'none';
     }
 });
