@@ -70,7 +70,13 @@ class Academy(db.Model):
 
 class Group(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    semester = db.Column(db.Integer)
+    name = db.Column(db.String(10), nullable=False) #6CV1, 8CV12
+    semester_id = db.Column(db.Integer, db.ForeignKey('semester.id'), nullable=False)
+    semester = db.relationship('Semester', backref='groups')  # Relación con Semester
+
+class Semester(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    semester = db.Column(db.String(10), nullable=False) #2024-01
     created_at = db.Column(db.DateTime, default=db.func.current_timestamp())
     finished_at = db.Column(db.DateTime)
 
@@ -97,10 +103,10 @@ def insert_default_data():
     # Verifica si ya existen roles en la tabla
     if Role.query.count() == 0:
         # Definir roles por defecto
-        admin_role = Role(id=0 ,name='Administrador', description='Funciones de Administrador')
-        Academy_role = Role(id=1 ,name='Academia', description='Funciones de Academia ')
-        Teacher_role = Role(id=2 ,name='Profesor', description='Funciones de Profesor')
-        Student_role = Role(id=3 ,name='Estudiante', description='Funciones de estudiante')
+        admin_role = Role(name='Administrador', description='Funciones de Administrador')
+        Academy_role = Role(name='Academia', description='Funciones de Academia ')
+        Teacher_role = Role(name='Profesor', description='Funciones de Profesor')
+        Student_role = Role(name='Estudiante', description='Funciones de estudiante')
 
         db.session.add(admin_role)
         db.session.add(Academy_role)
