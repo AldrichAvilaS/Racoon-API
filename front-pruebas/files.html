@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Archivos</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        body {
+            display: grid;
+            grid-template-columns: 200px 1fr 200px;
+            grid-template-rows: 100vh;
+            margin: 0;
+            font-family: Arial, sans-serif;
+        }
+
+        .sidebar-left,
+        .sidebar-right {
+            background-color: #f4f4f4;
+            padding: 20px;
+        }
+
+        .grid-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 20px;
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        .grid-item {
+            border: 1px solid #ccc;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            background-color: #fff;
+            transition: background-color 0.2s ease;
+        }
+
+        .grid-item:hover {
+            background-color: #f0f0f0;
+        }
+
+        button {
+            margin: 10px 0;
+            padding: 10px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- Barra lateral izquierda (opciones de archivos y carpetas) -->
+    <div class="sidebar-right">
+        <h3>Opciones</h3>
+        <button id="downloadButton" disabled>Descargar</button>
+        <button id="deleteButton" disabled>Eliminar</button>
+        <button id="downloadCurrentFolderButton" enable>Descargar carpeta</button>
+    </div>
+
+    <!-- Cuadrícula central para mostrar archivos y carpetas -->
+    <div class="grid-container" id="gridContainer">
+        <!-- Aquí se mostrarán los archivos y carpetas en formato de cuadrícula -->
+    </div>
+
+    <!-- Barra lateral derecha con botones -->
+    <div class="sidebar-left">
+        <h3>Acciones</h3>
+        <button id="backButton">Regresar a Dashboard</button>
+        <button id="newFolder">Nueva carpeta</button>
+        <button id="extraButton2">Función Extra 2</button>
+    </div>
+
+    <script src="files.js"></script>
+</body>
+
+</html>

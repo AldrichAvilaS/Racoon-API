@@ -1,3 +1,7 @@
+document.getElementById('goToFilesButton').addEventListener('click', function () {
+    window.location.href = 'files.html'; // Redirigir a files.html
+});
+
 // Mostrar y ocultar formularios según el botón clicado
 document.getElementById('createUserButton').addEventListener('click', function () {
     toggleForm('createUserForm');
@@ -207,6 +211,47 @@ document.getElementById('submitCreateUser').addEventListener('click', async func
     }
 });
 
+// Función para solicitar el contenido de un directorio específico
+async function fetchDirectoryContent(path = '') {
+    const token = localStorage.getItem('access_token');
+    const dirPath = encodeURIComponent(path);  // Codificar la ruta en la URL
+
+    try {
+        const response = await fetch(`http://127.0.0.1:5000/file/list?dirPath=${dirPath}`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`  // Agregar el token JWT
+            },
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+            const fileTreeContainer = document.getElementById('fileTree');
+            createFileTree(data.structure, fileTreeContainer, path);  // Actualizar el árbol de archivos
+        } else {
+            document.getElementById('fileTree').innerText = data.error || 'Error al obtener la estructura de archivos.';
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        document.getElementById('fileTree').innerText = 'Error en la conexión con la API.';
+    }
+}
+
+// Mostrar la estructura de archivos al hacer clic en el botón de la raíz
+document.getElementById('listFilesButton').addEventListener('click', async function () {
+    await fetchDirectoryContent('');  // Llamada inicial para la raíz del directorio
+});
+
+
+
+// Mostrar la estructura de archivos al hacer clic en el botón de la raíz
+document.getElementById('listFilesButton').addEventListener('click', async function () {
+    await fetchDirectoryContent('');  // Llamada inicial para la raíz del directorio
+});
+
+
 // Funcionalidad para cerrar sesión
 document.getElementById('logoutButton').addEventListener('click', async function () {
     try {
@@ -264,7 +309,7 @@ document.getElementById('submitUploadFile').addEventListener('click', async func
 
         if (endpointType === 'single') {
             const fileBase64 = await toBase64(file);
-
+            console.log(fileBase64);
             const xhr = new XMLHttpRequest();
             xhr.open('POST', 'http://127.0.0.1:5000/file/upload/single', true);
             xhr.setRequestHeader('Content-Type', 'application/json');
@@ -459,117 +504,92 @@ document.getElementById('submitUploadMultipleFiles').addEventListener('click', a
     }
 });
 
-// Función para generar el árbol de carpetas y archivos
-function createFileTree(structure, parentElement) {
-    const ul = document.createElement('ul');
+// Función para crear el árbol de archivos y carpetas para un directorio específico
+function createFileTree(structure, container, currentPath = '') {
+    // Limpiar el contenedor actual antes de cargar el nuevo contenido
+    container.innerHTML = '';
 
-    for (const key in structure) {
-        const li = document.createElement('li');
+    // Mostrar carpetas
+    if (structure.folders && structure.folders.length > 0) {
+        const folderList = document.createElement('ul');
 
-        if (typeof structure[key] === 'object') {
-            // Si es una carpeta
-            li.innerHTML = `<strong>${key}/</strong>`;
-            const subUl = createFileTree(structure[key], li);
-            li.appendChild(subUl);
-        } else {
-            // Si es un archivo
-            li.innerHTML = `${key}`;
-        }
+        structure.folders.forEach(folder => {
+            const folderItem = document.createElement('li');
+            
+            // Crear contenedor para carpeta y botón
+            const folderName = document.createElement('span');
+            folderName.textContent = folder;
+            folderName.style.cursor = 'pointer';
 
-        ul.appendChild(li);
-    }
+            // Evento para navegar a la carpeta al hacer clic en el nombre
+            folderName.addEventListener('click', async function () {
+                const newPath = currentPath ? `${currentPath}/${folder}` : folder;
+                await fetchDirectoryContent(newPath);  // Solicitar el contenido de la nueva carpeta
+            });
 
-    return ul;
-}
+            // Crear botón de descarga para la carpeta
+            const downloadButton = document.createElement('button');
+            downloadButton.textContent = 'Descargar';
+            downloadButton.style.marginLeft = '15px';
 
+            // Evento del botón de descarga para la carpeta
+            downloadButton.addEventListener('click', function (event) {
+                event.preventDefault();
+                event.stopPropagation(); // Evitar que el clic en el botón expanda la carpeta
 
-function createFileTree(structure, container) {
-    for (const [folder, content] of Object.entries(structure)) {
-        const folderElement = document.createElement('div');
-        folderElement.classList.add('folder');
+                // Asignar la ruta de la carpeta al campo del formulario de descarga
+                document.getElementById('folderToDownload').value = currentPath ? `${currentPath}/${folder}` : folder;
 
-        // Crear un contenedor solo para el nombre de la carpeta que maneje la expansión/colapso
-        const folderHeader = document.createElement('div');
-        folderHeader.style.display = 'inline-block';  // Esto permite que el nombre sea clicable sin afectar al botón
+                // Mostrar el formulario de descarga de la carpeta
+                toggleForm('downloadFolderForm');
+            });
 
-        const folderName = document.createElement('span');
-        folderName.textContent = (folder === '') ? 'Raíz del directorio' : folder;
-        folderName.style.cursor = 'pointer';
-
-        // Agregar el evento para expandir/colapsar la carpeta al hacer clic en el nombre de la carpeta
-        folderName.addEventListener('click', function () {
-            const folderContent = folderElement.querySelector('.folder-content');
-            folderContent.style.display = folderContent.style.display === 'none' ? 'block' : 'none';
+            // Añadir el nombre de la carpeta y el botón al contenedor
+            folderItem.appendChild(folderName);
+            folderItem.appendChild(downloadButton);
+            folderList.appendChild(folderItem);
         });
 
-        // Añadir el nombre de la carpeta al contenedor que maneja la expansión/colapso
-        folderHeader.appendChild(folderName);
+        container.appendChild(folderList);
+    }
 
-        // Crear el botón de descarga de la carpeta, completamente separado
-        const downloadButton = document.createElement('button');
-        downloadButton.textContent = 'Descargar';
-        downloadButton.style.marginLeft = '15px';
+    // Mostrar archivos
+    if (structure.files && structure.files.length > 0) {
+        const fileList = document.createElement('ul');
 
-        // Evento del botón de descarga para evitar cualquier colapso o expansión
-        downloadButton.addEventListener('click', function (event) {
-            event.preventDefault();
-            event.stopPropagation(); // Evitar que el clic cause colapso/expansión
+        structure.files.forEach(file => {
+            const fileItem = document.createElement('li');
+            
+            // Crear contenedor para archivo
+            const fileName = document.createElement('span');
+            fileName.textContent = file;
 
-            // Asignar la ruta de la carpeta al campo del formulario de descarga
-            document.getElementById('folderToDownload').value = folder;
+            // Crear botón de descarga para el archivo
+            const downloadButton = document.createElement('button');
+            downloadButton.textContent = 'Descargar';
+            downloadButton.style.marginLeft = '15px';
 
-            // Mostrar el formulario de descarga de la carpeta
-            toggleForm('downloadFolderForm');
+            // Evento del botón de descarga para el archivo
+            downloadButton.addEventListener('click', function (event) {
+                event.preventDefault();
+                event.stopPropagation(); // Evitar que el clic en el botón active otras acciones
 
-            // Mostrar un mensaje temporal de que la carpeta se ha seleccionado para descargar
-            console.log("Carpeta seleccionada para descargar: " + folder);
+                // Asignar la ruta del archivo al campo del formulario de descarga
+                document.getElementById('fileToDownload').value = currentPath ? `${currentPath}/${file}` : file;
+
+                // Mostrar el formulario de descarga de archivos
+                toggleForm('downloadFileForm');
+            });
+
+            // Añadir el nombre del archivo y el botón al contenedor
+            fileItem.appendChild(fileName);
+            fileItem.appendChild(downloadButton);
+            fileList.appendChild(fileItem);
         });
 
-        // Crear un contenedor para el contenido de la carpeta (archivos y subcarpetas)
-        const folderContent = document.createElement('div');
-        folderContent.classList.add('folder-content');
-        folderContent.style.display = 'none';  // Ocultar inicialmente
-
-        // Recorrer las subcarpetas
-        if (content.folders.length > 0) {
-            const subFolderList = document.createElement('ul');
-            content.folders.forEach(subFolder => {
-                const subFolderItem = document.createElement('li');
-                subFolderItem.textContent = subFolder;
-                subFolderList.appendChild(subFolderItem);
-            });
-            folderContent.appendChild(subFolderList);
-        }
-
-        // Recorrer los archivos
-        if (content.files.length > 0) {
-            const fileList = document.createElement('ul');
-            content.files.forEach(file => {
-                const fileItem = document.createElement('li');
-                fileItem.textContent = file;
-
-                fileItem.addEventListener('click', function () {
-                    document.getElementById('fileToDownload').value = file;
-                    toggleForm('downloadFileForm');  // Mostrar el formulario de descarga de archivos
-                });
-
-                fileList.appendChild(fileItem);
-            });
-            folderContent.appendChild(fileList);
-        }
-
-        // Añadir el nombre de la carpeta (expansión/colapso) y el botón de descarga como hermanos
-        const folderRow = document.createElement('div');
-        folderRow.appendChild(folderHeader);  // Nombre de la carpeta (maneja la expansión)
-        folderRow.appendChild(downloadButton);  // Botón de descarga (completamente independiente)
-
-        // Añadir el contenedor de la carpeta y su contenido al contenedor principal
-        folderElement.appendChild(folderRow);  // Añadir ambos elementos a la fila
-        folderElement.appendChild(folderContent);  // Añadir el contenido de la carpeta
-        container.appendChild(folderElement);
+        container.appendChild(fileList);
     }
 }
-
 
 // Mostrar la estructura de archivos al hacer clic en el botón
 document.getElementById('listFilesButton').addEventListener('click', async function () {

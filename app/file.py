@@ -2,13 +2,16 @@
 # Versión 0.4 - Proporcionar directorios y rutas
 from io import BytesIO
 import os, base64, hashlib
+import threading
+import time
+import uuid
 import zipfile
 import shutil
-from flask import Blueprint, request, jsonify, send_file, abort
+from flask import Blueprint, after_this_request, request, jsonify, send_file, abort
 from pathlib import Path
 from flask_jwt_extended import get_jwt_identity, jwt_required
 from .db import User
-from .path import store_path
+from .path import store_path, zip_path
 from .logs import log_api_request
 
 file_bp = Blueprint('file', __name__)
@@ -51,33 +54,52 @@ def verify_chunk_integrity(chunk_data, expected_hash):
 
 # Función que obtiene la estructura de directorios y archivos recursivamente
 def get_directory_structure(root_dir):
-    structure = {}
+    structure = {'': {'folders': [], 'files': []}}  # Estructura inicial para la raíz
 
     # Recorremos el directorio raíz con glob
-    for path in root_dir.glob('**/*'):  # Utilizamos '**/*' para obtener todo recursivamente
+    for path in root_dir.glob('**/*'):
         relative_path = path.relative_to(root_dir).as_posix()  # Convertimos la ruta a formato compatible ('/')
         
         if path.is_dir():
-            # Inicializamos la carpeta en la estructura
-            if relative_path not in structure:
-                structure[relative_path] = {
-                    'folders': [],
-                    'files': []
-                }
+            # Si la carpeta está en la raíz, agregarla a 'folders' de la raíz
+            parent_dir = '' if path.parent == root_dir else path.parent.relative_to(root_dir).as_posix()
             
-            # Añadimos las subcarpetas y archivos
-            for subpath in path.iterdir():
-                sub_relative_path = subpath.relative_to(root_dir).as_posix()
-                if subpath.is_dir():
-                    structure[relative_path]['folders'].append(sub_relative_path)
-                elif subpath.is_file():
-                    structure[relative_path]['files'].append(sub_relative_path)
+            # Si el directorio no existe en la estructura, lo inicializamos
+            if relative_path not in structure:
+                structure[relative_path] = {'folders': [], 'files': []}
+            
+            # Añadir la carpeta al padre
+            structure[parent_dir]['folders'].append(relative_path)
 
         elif path.is_file():
-            # Si es un archivo en la raíz o en cualquier otra carpeta
-            if '' not in structure:
-                structure[''] = {'folders': [], 'files': []}
-            structure['']['files'].append(relative_path)
+            # Si el archivo está en la raíz, agregarlo bajo la clave ''
+            parent_dir = '' if path.parent == root_dir else path.parent.relative_to(root_dir).as_posix()
+
+            # Si el directorio no existe en la estructura, lo inicializamos
+            if parent_dir not in structure:
+                structure[parent_dir] = {'folders': [], 'files': []}
+
+            # Añadir el archivo
+            structure[parent_dir]['files'].append(relative_path)
+
+    return structure
+
+# Función que obtiene la estructura de directorios y archivos de una carpeta específica
+def get_specific_directory_structure(dir_path):
+    structure = {'folders': [], 'files': []}  # Inicializamos la estructura
+
+    # Verificamos si la ruta es un directorio
+    if not dir_path.is_dir():
+        raise NotADirectoryError(f"{dir_path} no es un directorio válido.")
+    
+    # Recorremos los archivos y carpetas dentro del directorio proporcionado
+    for path in dir_path.iterdir():
+        relative_path = path.name  # Usamos solo el nombre del archivo/carpeta
+
+        if path.is_dir():
+            structure['folders'].append(relative_path)
+        elif path.is_file():
+            structure['files'].append(relative_path)
 
     return structure
 
@@ -234,7 +256,7 @@ def upload_file_chunk():
         return jsonify({"error": str(e)}), 500
 
 # Ruta para listar las carpetas y archivos dentro de store_path
-@file_bp.route('/list', methods=['GET'])
+@file_bp.route('/full-list', methods=['GET'])
 @jwt_required()  # Protegido con JWT
 def list_files_and_folders():
     current_boleta = get_jwt_identity()
@@ -250,6 +272,31 @@ def list_files_and_folders():
     try:
         # Obtener la estructura de archivos y carpetas
         directory_structure = get_directory_structure(user_directory)
+        #print(directory_structure)
+        return jsonify({"message": "Estructura obtenida correctamente", "structure": directory_structure}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+# Ruta para listar las carpetas y archivos dentro de una ruta especifica
+@file_bp.route('/list', methods=['GET'])
+@jwt_required()  # Protegido con JWT
+def list_files_and_folders_single():
+    current_boleta = get_jwt_identity()
+    user = User.query.get(current_boleta)
+    
+    # Recibimos la ruta proporcionada desde el front (por ejemplo, ?dir_path=subcarpeta)
+    relative_path = request.args.get('dirPath', '')  # Si no se proporciona, usa la raíz
+    
+    # Directorio del usuario
+    user_directory = Path(store_path) / str(user.get_boleta())  / relative_path
+    
+    # Verificar si el directorio existe
+    if not user_directory.exists():
+        return jsonify({"error": "Directorio del usuario no encontrado"}), 404
+
+    try:
+        # Obtener la estructura de archivos y carpetas
+        directory_structure = get_specific_directory_structure(user_directory)
         #print(directory_structure)
         return jsonify({"message": "Estructura obtenida correctamente", "structure": directory_structure}), 200
     except Exception as e:
@@ -281,6 +328,16 @@ def download_file():
     except Exception as e:
         return jsonify({"error": f"Error al descargar el archivo: {str(e)}"}), 500
 
+# Función para eliminar un archivo después de un retraso
+def delayed_file_deletion(filepath, delay=180):
+    """Elimina un archivo después de un retraso de 'delay' segundos."""
+    time.sleep(delay)
+    try:
+        os.remove(filepath)
+        print(f"Archivo {filepath} eliminado del servidor después de {delay} segundos.")
+    except Exception as e:
+        print(f"Error al eliminar el archivo {filepath}: {e}")
+
 # Ruta para descargar una carpeta como ZIP
 @file_bp.route('/download-folder', methods=['GET'])
 @jwt_required()  # Proteger con JWT
@@ -291,20 +348,32 @@ def download_folder():
     # Recibir la ruta de la carpeta que se desea comprimir
     folder_path = request.args.get('folder_path')
     
-    if not folder_path:
-        return jsonify({"error": "No se proporcionó la ruta de la carpeta"}), 400
-
     # Generar la ruta completa donde se encuentra la carpeta del usuario
     full_folder_path = os.path.join(store_path, str(user.get_boleta()), folder_path)
+    
+    print(full_folder_path, ": esta es la ruta de la carpeta")
     
     # Verificar si la carpeta existe
     if not os.path.exists(full_folder_path):
         return jsonify({"error": "La carpeta no existe"}), 404
 
     try:
-        # Crear un archivo ZIP en memoria
-        memory_file = BytesIO()
-        with zipfile.ZipFile(memory_file, 'w', zipfile.ZIP_DEFLATED) as zf:
+        # Definir el directorio donde se guardarán los archivos ZIP
+        zip_dir = zip_path  # Usar la variable `zip_path` donde se guardarán los ZIP
+
+        # Crear el directorio si no existe
+        if not os.path.exists(zip_dir):
+            os.makedirs(zip_dir)
+
+        # Generar un nombre único para el archivo ZIP para evitar colisiones
+        zip_filename = f"{os.path.basename(full_folder_path)}_{uuid.uuid4().hex}.zip"
+        zip_filepath = os.path.join(zip_dir, zip_filename)
+        
+        # Crear el archivo ZIP en el almacenamiento local
+        with zipfile.ZipFile(zip_filepath, 'w', zipfile.ZIP_DEFLATED) as zf:
+            total_files = sum([len(files) for _, _, files in os.walk(full_folder_path)])
+            processed_files = 0
+            
             # Recorrer todos los archivos dentro de la carpeta y agregarlos al ZIP
             for root, dirs, files in os.walk(full_folder_path):
                 for file in files:
@@ -312,11 +381,56 @@ def download_folder():
                     arcname = os.path.relpath(full_file_path, full_folder_path)
                     zf.write(full_file_path, arcname)
 
-        memory_file.seek(0)  # Mover el puntero al inicio del archivo ZIP en memoria
-        
-        # Enviar el archivo ZIP generado al cliente
-        zip_filename = f"{os.path.basename(full_folder_path)}.zip"
-        return send_file(memory_file, as_attachment=True, download_name=zip_filename)
+                    # Actualizar el progreso en la consola
+                    processed_files += 1
+                    progress = (processed_files / total_files) * 100
+                    print(f"Progreso: {progress:.2f}% ({processed_files}/{total_files} archivos)")
+
+        # Programar la eliminación del archivo ZIP en un hilo separado con retraso
+        @after_this_request
+        def schedule_file_deletion(response):
+            threading.Thread(target=delayed_file_deletion, args=(zip_filepath, 60)).start()  # 5 segundos de retraso
+            return response
+
+        # Enviar el archivo ZIP generado al cliente desde el disco
+        return send_file(zip_filepath, as_attachment=True, download_name=os.path.basename(zip_filepath))
 
     except Exception as e:
         return jsonify({"error": f"Error al comprimir la carpeta: {str(e)}"}), 500
+    
+
+# Ruta para crear una nueva carpeta
+@file_bp.route('/create-folder', methods=['POST'])
+@jwt_required()  # Proteger con JWT
+def create_folder():
+    current_boleta = get_jwt_identity()
+    user = User.query.get(current_boleta)
+    
+    # Obtener los datos del front-end
+    data = request.get_json()
+    folder_name = data.get('folder_name')
+    parent_dir = data.get('parent_dir', '')  # Si no se proporciona, se crea en la raíz del directorio del usuario
+
+    if not folder_name:
+        return jsonify({"error": "No se proporcionó el nombre de la carpeta"}), 400
+
+    # Directorio donde se creará la carpeta
+    user_directory = os.path.join(store_path, str(user.get_boleta()), parent_dir)
+    
+    # Asegurarse de que el directorio del usuario existe
+    if not os.path.exists(user_directory):
+        return jsonify({"error": "El directorio padre no existe"}), 404
+    
+    # Ruta completa de la nueva carpeta
+    new_folder_path = os.path.join(user_directory, folder_name)
+
+    # Verificar si la carpeta ya existe
+    if os.path.exists(new_folder_path):
+        return jsonify({"error": "La carpeta ya existe"}), 400
+
+    try:
+        # Crear la nueva carpeta
+        os.makedirs(new_folder_path)
+        return jsonify({"message": f"Carpeta '{folder_name}' creada exitosamente en '{parent_dir}'"}), 201
+    except Exception as e:
+        return jsonify({"error": f"Error al crear la carpeta: {str(e)}"}), 500
