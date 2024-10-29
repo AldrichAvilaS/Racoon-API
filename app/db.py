@@ -41,6 +41,19 @@ class User(db.Model):
     def get_name(self):
         return self.nombre
 
+# Modelo de usuario
+class teacher(db.Model):
+    rfc = db.Column(db.Integer, unique=True, primary_key=True)  # Cambiado para que boleta sea la clave primaria
+    email = db.Column(db.String(120), unique=True, nullable=False)
+    password = db.Column(db.String(200), nullable=False)
+    nombre = db.Column(db.String(100), nullable=False)
+    active = db.Column(db.Boolean, default=False)
+    confirmed_at = db.Column(db.DateTime)
+    storage_limit = db.Column(db.Integer)
+    
+    def __repr__(self):
+        return f'<teacher {self.rfc}>'
+
 
 class Subject(db.Model):
     subject_id = db.Column(db.Integer, primary_key=True)

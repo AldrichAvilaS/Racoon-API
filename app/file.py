@@ -316,8 +316,8 @@ def download_file():
         return jsonify({"error": "No se proporcionó la ruta del archivo"}), 400
     
     # Generar la ruta completa donde se encuentra el archivo del usuario
-    full_path = os.path.join(store_path, str(user.get_boleta()), file_path)
-    
+    full_path = os.path.join(store_path + str(user.get_boleta()) + file_path)
+    print(full_path)
     # Verificar si el archivo existe
     if not os.path.exists(full_path):
         return jsonify({"error": "El archivo no existe"}), 404
@@ -348,10 +348,12 @@ def download_folder():
     # Recibir la ruta de la carpeta que se desea comprimir
     folder_path = request.args.get('folder_path')
     
+    #print(folder_path, ": esta es la ruta de la carpeta")
     # Generar la ruta completa donde se encuentra la carpeta del usuario
-    full_folder_path = os.path.join(store_path, str(user.get_boleta()), folder_path)
+    full_folder_path = os.path.join(store_path + str(user.get_boleta()) + folder_path)
     
-    print(full_folder_path, ": esta es la ruta de la carpeta")
+    #print("full: ",full_folder_path)
+    
     
     # Verificar si la carpeta existe
     if not os.path.exists(full_folder_path):
@@ -384,7 +386,7 @@ def download_folder():
                     # Actualizar el progreso en la consola
                     processed_files += 1
                     progress = (processed_files / total_files) * 100
-                    print(f"Progreso: {progress:.2f}% ({processed_files}/{total_files} archivos)")
+                    #print(f"Progreso: {progress:.2f}% ({processed_files}/{total_files} archivos)")
 
         # Programar la eliminación del archivo ZIP en un hilo separado con retraso
         @after_this_request
@@ -410,12 +412,11 @@ def create_folder():
     data = request.get_json()
     folder_name = data.get('folder_name')
     parent_dir = data.get('parent_dir', '')  # Si no se proporciona, se crea en la raíz del directorio del usuario
-
     if not folder_name:
         return jsonify({"error": "No se proporcionó el nombre de la carpeta"}), 400
 
     # Directorio donde se creará la carpeta
-    user_directory = os.path.join(store_path, str(user.get_boleta()), parent_dir)
+    user_directory = os.path.join(store_path + str(user.get_boleta()) + parent_dir)
     
     # Asegurarse de que el directorio del usuario existe
     if not os.path.exists(user_directory):
@@ -434,3 +435,39 @@ def create_folder():
         return jsonify({"message": f"Carpeta '{folder_name}' creada exitosamente en '{parent_dir}'"}), 201
     except Exception as e:
         return jsonify({"error": f"Error al crear la carpeta: {str(e)}"}), 500
+    
+# Ruta para crear una nueva carpeta
+@file_bp.route('/move', methods=['POST'])
+@jwt_required()  # Proteger con JWT
+def move_file():
+    current_boleta = get_jwt_identity()
+    user = User.query.get(current_boleta)
+    
+    # Obtener los datos del front-end
+    data = request.get_json()
+    folder_name = data.get('folder_name')
+    parent_dir = data.get('parent_dir', '')  # Si no se proporciona, se crea en la raíz del directorio del usuario
+    if not folder_name:
+        return jsonify({"error": "No se proporcionó el nombre de la carpeta"}), 400
+
+    # Directorio donde se creará la carpeta
+    user_directory = os.path.join(store_path + str(user.get_boleta()) + parent_dir)
+    
+    # Asegurarse de que el directorio del usuario existe
+    if not os.path.exists(user_directory):
+        return jsonify({"error": "El directorio padre no existe"}), 404
+    
+    # Ruta completa de la nueva carpeta
+    new_folder_path = os.path.join(user_directory, folder_name)
+
+    # Verificar si la carpeta ya existe
+    if os.path.exists(new_folder_path):
+        return jsonify({"error": "La carpeta ya existe"}), 400
+
+    try:
+        # Crear la nueva carpeta
+        os.makedirs(new_folder_path)
+        return jsonify({"message": f"Carpeta '{folder_name}' creada exitosamente en '{parent_dir}'"}), 201
+    except Exception as e:
+        return jsonify({"error": f"Error al crear la carpeta: {str(e)}"}), 500
+    

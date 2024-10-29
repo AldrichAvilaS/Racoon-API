@@ -126,10 +126,10 @@ def info_user():
     user = User.query.get(boleta)
 
     if user is None:
-        log_api_request(boleta, 'GET - Información de usuario no encontrada', "users", str(boleta), 404)
+        #log_api_request(boleta, 'GET - Información de usuario no encontrada', "users", str(boleta), 404)
         return jsonify({"error": "Usuario no encontrado"}), 404
 
-    log_api_request(boleta, 'GET - Información de usuario obtenida', "users", str(boleta), 200)
+    #log_api_request(boleta, 'GET - Información de usuario obtenida', "users", str(boleta), 200)
     return jsonify({
         "boleta": user.get_boleta(),
         "name": user.get_name(),

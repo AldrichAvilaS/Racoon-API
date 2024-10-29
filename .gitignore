@@ -3,3 +3,5 @@
 *.mako
 /migrations
 /app/__pycache__
+*.pyc
+app/path.py

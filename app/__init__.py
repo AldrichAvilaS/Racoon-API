@@ -24,7 +24,7 @@ def create_app():
     app.config['MAX_CONTENT_LENGTH'] = 10 * 1024 * 1024 * 1024  # 1 GB
     # Establece la clave secreta para firmar JWT
     app.config['JWT_SECRET_KEY'] = 'd822d96ef56c589c3904a372381fa378'  # Cambia esto por una clave secreta única
-    app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(days=14)  # Duración de los tokens
+    app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(days=2)  # Duración de los tokens
     # Inicializa Migrate
     migrate = Migrate(app, db)
     
