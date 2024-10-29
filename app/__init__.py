@@ -11,6 +11,8 @@ from .users import users_bp
 from .auth import auth_bp
 from .file import file_bp
 from .groups import groups_bp
+from .teacher import teacher_bp
+from .events import logs_bp
 
 def create_app():
     app = Flask(__name__)
@@ -38,5 +40,7 @@ def create_app():
     app.register_blueprint(users_bp, url_prefix='/users')
     app.register_blueprint(auth_bp, url_prefix='/auth')
     app.register_blueprint(file_bp, url_prefix='/file')
+    app.register_blueprint(teacher_bp, url_prefix='/teacher')
     app.register_blueprint(groups_bp, url_prefix='/groups')
+    app.register_blueprint(logs_bp, url_prefix='/logs')
     return app

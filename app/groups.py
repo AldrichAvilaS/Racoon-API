@@ -3,8 +3,8 @@ from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from sqlalchemy.exc import IntegrityError
 from .db import Academy, Enrollment, Subject, db, Group, Semester, User
-from .logs import log_api_request  # Si manejas logs
-from .decorators import role_required  # Suponiendo que tienes un decorador para roles
+from .logs import log_api_request  
+from .decorators import role_required  
 
 # Crear el blueprint para grupos
 groups_bp = Blueprint('groups', __name__)

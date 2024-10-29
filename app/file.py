@@ -6,7 +6,6 @@ import threading
 import time
 import uuid
 import zipfile
-import shutil
 from flask import Blueprint, after_this_request, request, jsonify, send_file, abort
 from pathlib import Path
 from flask_jwt_extended import get_jwt_identity, jwt_required
@@ -436,38 +435,38 @@ def create_folder():
     except Exception as e:
         return jsonify({"error": f"Error al crear la carpeta: {str(e)}"}), 500
     
-# Ruta para crear una nueva carpeta
+# Ruta para mover elementos entre directorios
 @file_bp.route('/move', methods=['POST'])
 @jwt_required()  # Proteger con JWT
-def move_file():
+def move_file_or_folder():
     current_boleta = get_jwt_identity()
     user = User.query.get(current_boleta)
     
     # Obtener los datos del front-end
     data = request.get_json()
-    folder_name = data.get('folder_name')
-    parent_dir = data.get('parent_dir', '')  # Si no se proporciona, se crea en la raíz del directorio del usuario
-    if not folder_name:
-        return jsonify({"error": "No se proporcionó el nombre de la carpeta"}), 400
+    source_path = data.get('source_path')  # Ruta del archivo o carpeta a mover
+    destination_path = data.get('destination_path')  # Nuevo directorio donde se moverá el archivo o carpeta
 
-    # Directorio donde se creará la carpeta
-    user_directory = os.path.join(store_path + str(user.get_boleta()) + parent_dir)
+    if not source_path or not destination_path:
+        return jsonify({"error": "No se proporcionaron las rutas de origen o destino"}), 400
+
+    # Directorio del usuario y rutas completas
+    user_directory = Path(store_path) / str(user.get_boleta())
+    full_source_path = user_directory / source_path
+    full_destination_path = user_directory / destination_path
+
+    # Verificar si la ruta de origen existe
+    if not full_source_path.exists():
+        return jsonify({"error": "El archivo o carpeta de origen no existe"}), 404
+
+    # Crear el directorio de destino si no existe
+    full_destination_path.parent.mkdir(parents=True, exist_ok=True)
     
-    # Asegurarse de que el directorio del usuario existe
-    if not os.path.exists(user_directory):
-        return jsonify({"error": "El directorio padre no existe"}), 404
-    
-    # Ruta completa de la nueva carpeta
-    new_folder_path = os.path.join(user_directory, folder_name)
-
-    # Verificar si la carpeta ya existe
-    if os.path.exists(new_folder_path):
-        return jsonify({"error": "La carpeta ya existe"}), 400
-
     try:
-        # Crear la nueva carpeta
-        os.makedirs(new_folder_path)
-        return jsonify({"message": f"Carpeta '{folder_name}' creada exitosamente en '{parent_dir}'"}), 201
+        # Mover el archivo o carpeta a la nueva ubicación
+        full_source_path.rename(full_destination_path)
+        log_api_request(current_boleta, "Movimiento de archivo/carpeta exitoso", "move", str(full_source_path), 200)
+        return jsonify({"message": f"'{source_path}' movido exitosamente a '{destination_path}'"}), 200
     except Exception as e:
-        return jsonify({"error": f"Error al crear la carpeta: {str(e)}"}), 500
-    
+        log_api_request(current_boleta, "Error al mover archivo/carpeta", "move", str(full_source_path), 500, error_message=str(e))
+        return jsonify({"error": f"Error al mover archivo o carpeta: {str(e)}"}), 500

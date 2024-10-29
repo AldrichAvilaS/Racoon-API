@@ -41,32 +41,35 @@ class User(db.Model):
     def get_name(self):
         return self.nombre
 
-# Modelo de usuario
-class teacher(db.Model):
-    rfc = db.Column(db.Integer, unique=True, primary_key=True)  # Cambiado para que boleta sea la clave primaria
+# Modelo de profesor
+class Teacher(db.Model):
+    id = db.Column(db.Integer, unique=True, primary_key=True)  # Cambiado para que boleta sea la clave primaria
     email = db.Column(db.String(120), unique=True, nullable=False)
     password = db.Column(db.String(200), nullable=False)
     nombre = db.Column(db.String(100), nullable=False)
     active = db.Column(db.Boolean, default=False)
     confirmed_at = db.Column(db.DateTime)
     storage_limit = db.Column(db.Integer)
-    
+    subjects = db.relationship('Subject', backref='assigned_subjects', lazy=True)
+
+     
     def __repr__(self):
-        return f'<teacher {self.rfc}>'
+        return f'<teacher {self.nombre}>' # Devuelve el ID del profesor
 
 
 class Subject(db.Model):
     subject_id = db.Column(db.Integer, primary_key=True)
     academy_id = db.Column(db.Integer, db.ForeignKey('academy.id'))  # Relación con Academy
     subject_name = db.Column(db.String(100), nullable=False)
-    teacher_id = db.Column(db.Integer, db.ForeignKey('user.boleta'))  # Relación con User (profesor)
-    teacher = db.relationship('User', foreign_keys=[teacher_id], backref='subjects')  # Relación con el profesor
+    teacher_id = db.Column(db.Integer, db.ForeignKey('teacher.id')) 
     group_id = db.Column(db.Integer, db.ForeignKey('group.id'))  # Relación con Group
     group = db.relationship('Group', backref='subjects')
     description = db.Column(db.Text)
     swift_scope = db.Column(db.String(255))
 
-
+    def __repr__(self):
+        return f'<Subject {self.subject_name}>'
+    
 class Enrollment(db.Model):
     enrollment_id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.boleta'), nullable=False)
@@ -78,8 +81,9 @@ class Academy(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
     description = db.Column(db.Text)
-    main_teacher_id = db.Column(db.Integer, db.ForeignKey('user.boleta'))  # Llave foránea hacia User (profesor)
-    main_teacher = db.relationship('User', foreign_keys=[main_teacher_id], backref='academies')  # Relación con profesor
+    main_teacher_id = db.Column(db.Integer, db.ForeignKey('teacher.id'))
+    main_teacher = db.relationship('Teacher', backref='academies')
+
 
 class Group(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -138,7 +142,8 @@ def insert_default_data():
             email='aldrich@racoon.com',
             password=generate_password_hash('root'),  # Asegúrate de cambiar la contraseña por defecto
             nombre='Aldrich Avila',
-            role_id=Role.query.filter_by(id=0).first().id  # Asignar el rol de administrador
+            role_id=Role.query.filter_by(name='Administrador').first().id
+
         )
         
         db.session.add(admin_user)
