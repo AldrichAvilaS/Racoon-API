@@ -1,11 +1,12 @@
 from flask_sqlalchemy import SQLAlchemy
+from werkzeug.security import generate_password_hash
 
 # Inicializa la instancia de SQLAlchemy
 db = SQLAlchemy()
 
 # Modelo de rol
 class Role(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
+    role_id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(50), unique=True, nullable=False)
     description = db.Column(db.String(200))
 
@@ -14,146 +15,175 @@ class Role(db.Model):
 
 # Modelo de usuario
 class User(db.Model):
-    boleta = db.Column(db.Integer, unique=True, primary_key=True)  # Cambiado para que boleta sea la clave primaria
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(50), unique=True, nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
     password = db.Column(db.String(200), nullable=False)
-    current_semester = db.Column(db.Integer, default=1)
-    nombre = db.Column(db.String(100), nullable=False)
     active = db.Column(db.Boolean, default=False)
     confirmed_at = db.Column(db.DateTime)
     storage_limit = db.Column(db.Integer)
     delete_date = db.Column(db.DateTime)
-    
+
     # Llave foránea para el rol
     role_id = db.Column(db.Integer, db.ForeignKey('role.id'), nullable=False)
-    role = db.relationship('Role', backref='users')  # Relación con Role
+    role = db.relationship('Role', backref='users')
 
     def __repr__(self):
-        return f'<User {self.email}>'
-    def get_id(self):
-        return self.boleta  # Devuelve el ID del usuario
-    def get_boleta(self):
-        return self.boleta  # Devuelve el ID del usuario
-    def get_role(self):
-        return self.role_id
-    def get_email(self):
-        return self.email
-    def get_name(self):
-        return self.nombre
+        return f'<User {self.username}>'
+
+# Modelo de estudiante
+class Student(db.Model):
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), primary_key=True)
+    boleta = db.Column(db.Integer, unique=True, nullable=False)
+    current_semester = db.Column(db.Integer)
+    user = db.relationship('User', backref='student')
+
+    def __repr__(self):
+        return f'<Student {self.boleta}>'
 
 # Modelo de profesor
 class Teacher(db.Model):
-    id = db.Column(db.Integer, unique=True, primary_key=True)  # Cambiado para que boleta sea la clave primaria
-    email = db.Column(db.String(120), unique=True, nullable=False)
-    password = db.Column(db.String(200), nullable=False)
-    nombre = db.Column(db.String(100), nullable=False)
-    active = db.Column(db.Boolean, default=False)
-    confirmed_at = db.Column(db.DateTime)
-    storage_limit = db.Column(db.Integer)
-    subjects = db.relationship('Subject', backref='assigned_subjects', lazy=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), primary_key=True)
+    rfc = db.Column(db.String(20), unique=True, nullable=False)
+    user = db.relationship('User', backref='teacher')
 
-     
     def __repr__(self):
-        return f'<teacher {self.nombre}>' # Devuelve el ID del profesor
+        return f'<Teacher {self.user.username}>'
 
+# Modelo de academia
+class Academy(db.Model):
+    academy_id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    description = db.Column(db.Text)
+    main_teacher_id = db.Column(db.Integer, db.ForeignKey('teacher.user_id'))
+    main_teacher = db.relationship('Teacher', backref='academies')
 
+    def __repr__(self):
+        return f'<Academy {self.name}>'
+
+# Modelo de materia
 class Subject(db.Model):
     subject_id = db.Column(db.Integer, primary_key=True)
-    academy_id = db.Column(db.Integer, db.ForeignKey('academy.id'))  # Relación con Academy
     subject_name = db.Column(db.String(100), nullable=False)
-    teacher_id = db.Column(db.Integer, db.ForeignKey('teacher.id')) 
-    group_id = db.Column(db.Integer, db.ForeignKey('group.id'))  # Relación con Group
-    group = db.relationship('Group', backref='subjects')
     description = db.Column(db.Text)
     swift_scope = db.Column(db.String(255))
 
+    # Llaves foráneas
+    academy_id = db.Column(db.Integer, db.ForeignKey('academy.academy_id'))
+    teacher_id = db.Column(db.Integer, db.ForeignKey('teacher.user_id'))
+    group_id = db.Column(db.Integer, db.ForeignKey('group.id'))
+
+    academy = db.relationship('Academy', backref='subjects')
+    teacher = db.relationship('Teacher', backref='subjects')
+    group = db.relationship('Group', backref='subjects')
+
     def __repr__(self):
         return f'<Subject {self.subject_name}>'
-    
+
+# Modelo de grupo
+class Group(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(10), nullable=False)  # e.g., 6CV1, 8CV12
+    semester_id = db.Column(db.Integer, db.ForeignKey('semester.id'), nullable=False)
+    semester = db.relationship('Semester', backref='groups')
+
+    def __repr__(self):
+        return f'<Group {self.name}>'
+
+# Modelo de semestre
+class Semester(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    semester = db.Column(db.String(10), nullable=False)  # e.g., 2024-01
+    created_at = db.Column(db.DateTime, default=db.func.current_timestamp())
+    finished_at = db.Column(db.DateTime)
+
+    def __repr__(self):
+        return f'<Semester {self.semester}>'
+
+# Modelo de inscripción
 class Enrollment(db.Model):
     enrollment_id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.boleta'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     subject_id = db.Column(db.Integer, db.ForeignKey('subject.subject_id'), nullable=False)
     enrollment_date = db.Column(db.DateTime, default=db.func.current_timestamp())
     status = db.Column(db.String(50), nullable=False)
 
-class Academy(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(100), nullable=False)
-    description = db.Column(db.Text)
-    main_teacher_id = db.Column(db.Integer, db.ForeignKey('teacher.id'))
-    main_teacher = db.relationship('Teacher', backref='academies')
+    user = db.relationship('User', backref='enrollments')
+    subject = db.relationship('Subject', backref='enrollments')
 
+    def __repr__(self):
+        return f'<Enrollment {self.user.username} - {self.subject.subject_name}>'
 
-class Group(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(10), nullable=False) #6CV1, 8CV12
-    semester_id = db.Column(db.Integer, db.ForeignKey('semester.id'), nullable=False)
-    semester = db.relationship('Semester', backref='groups')  # Relación con Semester
-
-class Semester(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    semester = db.Column(db.String(10), nullable=False) #2024-01
-    created_at = db.Column(db.DateTime, default=db.func.current_timestamp())
-    finished_at = db.Column(db.DateTime)
-
+# Modelo de aviso
 class Notice(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     notice = db.Column(db.Text, nullable=False)
     date_at_publish = db.Column(db.DateTime, default=db.func.current_timestamp())
     date_at_finish = db.Column(db.DateTime)
 
+    def __repr__(self):
+        return f'<Notice {self.id}>'
+
+# Modelo de registro de API
 class APILog(db.Model):
-    __tablename__ = 'api_logs'
-    id = db.Column(db.Integer, primary_key=True, autoincrement=True)  # Identificador único
-    user_id = db.Column(db.String(255), nullable=False)                # ID del usuario
-    operation = db.Column(db.String(50), nullable=False)               # Tipo de operación
-    container_name = db.Column(db.String(255), nullable=False)         # Nombre del contenedor
-    object_name = db.Column(db.String(255), nullable=False)            # Nombre del objeto
-    status_code = db.Column(db.Integer, nullable=False)                # Código de estado HTTP
-    timestamp = db.Column(db.DateTime, default=db.func.current_timestamp())  # Marca de tiempo    status_code = db.Column(db.Integer, nullable=False)                # Código de estado HTTP
-    error_message = db.Column(db.Text)                                 # Mensaje de error, si lo hay
-from werkzeug.security import generate_password_hash
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    user_id = db.Column(db.String(255), nullable=False)
+    user_identifier = db.Column(db.String(255), nullable=False)  
+    operation = db.Column(db.String(50), nullable=False)
+    container_name = db.Column(db.String(255), nullable=False)
+    object_name = db.Column(db.String(255), nullable=False)
+    status_code = db.Column(db.Integer, nullable=False)
+    timestamp = db.Column(db.DateTime, default=db.func.current_timestamp())
+    error_message = db.Column(db.Text)
 
-# Función para agregar roles y usuarios por defecto
+    def __repr__(self):
+        return f'<APILog {self.id}>'
+
+# Función para agregar datos por defecto
 def insert_default_data():
-    # Verifica si ya existen roles en la tabla
     if Role.query.count() == 0:
-        # Definir roles por defecto
-        admin_role = Role(name='Administrador', description='Funciones de Administrador')
-        Academy_role = Role(name='Academia', description='Funciones de Academia ')
-        Teacher_role = Role(name='Profesor', description='Funciones de Profesor')
-        Student_role = Role(name='Estudiante', description='Funciones de estudiante')
-
-        db.session.add(admin_role)
-        db.session.add(Academy_role)
-        db.session.add(Teacher_role)
-        db.session.add(Student_role)
-        
+        roles = [
+            Role(name='Administrador', description='Funciones de Administrador'),
+            Role(name='Academia', description='Funciones de Academia'),
+            Role(name='Profesor', description='Funciones de Profesor'),
+            Role(name='Estudiante', description='Funciones de Estudiante')
+        ]
+        db.session.add_all(roles)
         db.session.commit()
+        print("Roles por defecto creados")
 
-        print("Roles por defecto creados: Administrador, academia, profesor y estudiante")
-
-    # Verifica si ya existe un usuario administrador
     if User.query.count() == 0:
-        # Crear un usuario por defecto con el rol de administrador
         admin_user = User(
-            boleta=2019300397,  # Puedes cambiar este ID por defecto
-            email='aldrich@racoon.com',
-            password=generate_password_hash('root'),  # Asegúrate de cambiar la contraseña por defecto
-            nombre='Aldrich Avila',
+            username='admin',
+            email='admin@example.com',
+            password=generate_password_hash('root'),
             role_id=Role.query.filter_by(name='Administrador').first().id
-
         )
-        
         db.session.add(admin_user)
         db.session.commit()
+        print("Usuario administrador por defecto creado")
 
-        print("Usuario administrador por defecto creado: aldrich@racoon.com")
-        
 def init_db(app):
-    """Inicializa la base de datos con la aplicación."""
     db.init_app(app)
     with app.app_context():
-        db.create_all()  # Crea las tablas en la base de datos
-        insert_default_data()  # Inserta roles y usuarios por defecto si no existen
+        db.create_all()
+        insert_default_data()
+
+def get_user_identifier(user_id):
+    user = User.query.get(user_id)
+    if not user:
+        return None
+
+    if user.role.name == 'Estudiante':
+        student = Student.query.filter_by(user_id=user_id).first()
+        return student.boleta if student else None
+    elif user.role.name == 'Profesor':
+        teacher = Teacher.query.filter_by(user_id=user_id).first()
+        return teacher.rfc if teacher else None
+    elif user.role.name == 'Administrador':
+        return f'admin_{user.id}'
+    elif user.role.name == 'Academia':
+        academy = Academy.query.filter_by(main_teacher_id=user_id).first()
+        return academy.academy_id if academy else None
+    else:
+        return None

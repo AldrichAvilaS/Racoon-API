@@ -1,0 +1,20 @@
+clouds:
+  mycloud:
+    auth:
+      auth_url: http://192.168.1.104:5000/v3
+      username: api_creator
+      password: openpwd1
+      project_name: admin
+      project_domain_name: Default
+      user_domain_name: Default
+    identity_api_version: 3
+    image_api_version: 2
+
+    #export OS_PROJECT_DOMAIN_NAME=Default
+    #export OS_USER_DOMAIN_NAME=Default
+    #export OS_PROJECT_NAME=admin
+    #export OS_USERNAME=api_creator
+    #export OS_PASSWORD=openpwd1
+    #export OS_AUTH_URL=http://controller:5000/v3
+    #export OS_IDENTITY_API_VERSION=3
+    #export OS_IMAGE_API_VERSION=2

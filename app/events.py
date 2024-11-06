@@ -1,17 +1,17 @@
 from flask import Blueprint, request, jsonify
-from app.decorators import role_required
+from .decorators import role_required
 from .db import db, APILog
 from flask_jwt_extended import jwt_required
 from datetime import datetime
 
 logs_bp = Blueprint('logs_bp', __name__)
 
-# Obtener logs filtrados por user_id, container_name y rango de fechas opcional
+# Obtener logs filtrados por user_identifier, container_name y rango de fechas opcional
 @logs_bp.route('/logs', methods=['GET'])
 @jwt_required()
-@role_required(0)  # Solo usuarios con rol 0 pueden acceder
+@role_required(0)  # Solo usuarios con rol "Administrador" pueden acceder
 def get_logs():
-    user_id = request.args.get('user_id')
+    user_identifier = request.args.get('user_identifier')
     container_name = request.args.get('container_name')
     start_date = request.args.get('start_date')
     end_date = request.args.get('end_date')
@@ -19,9 +19,9 @@ def get_logs():
     # Crear la consulta base
     query = APILog.query
     
-    # Filtrar por user_id o container_name si están presentes
-    if user_id:
-        query = query.filter_by(user_id=user_id)
+    # Filtrar por user_identifier o container_name si están presentes
+    if user_identifier:
+        query = query.filter_by(user_identifier=user_identifier)
     if container_name:
         query = query.filter_by(container_name=container_name)
     
@@ -46,7 +46,7 @@ def get_logs():
     # Serializar los logs para el JSON de respuesta
     logs_data = [{
         "id": log.id,
-        "user_id": log.user_id,
+        "user_identifier": log.user_identifier,
         "operation": log.operation,
         "container_name": log.container_name,
         "object_name": log.object_name,
