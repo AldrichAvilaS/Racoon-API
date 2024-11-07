@@ -1,7 +1,8 @@
+// script.js
 document.getElementById('loginForm').addEventListener('submit', async function (event) {
     event.preventDefault();
 
-    const boleta = document.getElementById('boleta').value;
+    const identifier = document.getElementById('identifier').value;
     const password = document.getElementById('password').value;
 
     try {
@@ -10,7 +11,7 @@ document.getElementById('loginForm').addEventListener('submit', async function (
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ boleta, password }),
+            body: JSON.stringify({ identifier, password }),
         });
 
         const data = await response.json();

@@ -1,6 +1,6 @@
 from flask import Blueprint, request, jsonify
-from .decorators import role_required
-from .db import db, APILog
+from ..authorization.decorators import role_required
+from ..db.db import db, APILog
 from flask_jwt_extended import jwt_required
 from datetime import datetime
 
@@ -9,7 +9,7 @@ logs_bp = Blueprint('logs_bp', __name__)
 # Obtener logs filtrados por user_identifier, container_name y rango de fechas opcional
 @logs_bp.route('/logs', methods=['GET'])
 @jwt_required()
-@role_required(0)  # Solo usuarios con rol "Administrador" pueden acceder
+#@role_required(0)  # Solo usuarios con rol "Administrador" pueden acceder
 def get_logs():
     user_identifier = request.args.get('user_identifier')
     container_name = request.args.get('container_name')

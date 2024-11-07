@@ -1,7 +1,7 @@
 from functools import wraps
 from flask import jsonify
 from flask_jwt_extended import get_jwt_identity, jwt_required
-from .db import User, Student, Teacher, Academy, Role
+from ..db.db import User, Student, Teacher, Academy, Role
 
 def role_required(*roles):
     def decorator(f):

@@ -11,12 +11,11 @@
 <body>
     <div class="dashboard-container">
         <h2>Bienvenido al Dashboard</h2>
-        <!-- Botón para redirigir a la página de archivos (files.html) -->
-        <button id="goToFilesButton" style="color: red;">Ir a Archivos</button>
+        <button id="goToFilesButton">Ir a Archivos</button>
 
         <br><br>
         <button id="getUsersButton">Obtener Todos los Usuarios</button>
-        <button id="getUserButton">Obtener Usuario por Boleta</button>
+        <button id="getUserButton">Obtener Usuario por Identificador</button>
         <button id="updateUserButton">Actualizar Usuario</button>
         <button id="deleteUserButton">Eliminar Usuario</button>
         <button id="createUserButton">Crear Usuario</button>
@@ -27,15 +26,15 @@
         <button id="logoutButton">Cerrar Sesión</button>
 
         <div id="getUserForm" style="display: none;">
-            <h3>Obtener Usuario por Boleta</h3>
-            <input type="number" id="userBoleta" placeholder="Boleta" required>
+            <h3>Obtener Usuario por Identificador</h3>
+            <input type="text" id="userIdentifier" placeholder="Identificador (Boleta, RFC, ID)" required>
             <button id="submitGetUser">Obtener Usuario</button>
             <p id="getUserMessage"></p>
         </div>
 
         <form id="updateUserForm" style="display: none;">
             <h3>Actualizar Usuario</h3>
-            <input type="number" id="updateBoleta" placeholder="Boleta" required>
+            <input type="text" id="updateIdentifier" placeholder="Identificador (Boleta, RFC, ID)" required>
             <input type="email" id="updateEmail" placeholder="Nuevo Email">
             <input type="text" id="updateNombre" placeholder="Nuevo Nombre">
             <input type="password" id="updatePassword" placeholder="Nueva Contraseña">
@@ -46,57 +45,50 @@
 
         <form id="deleteUserForm" style="display: none;">
             <h3>Eliminar Usuario</h3>
-            <input type="number" id="deleteBoleta" placeholder="Boleta" required>
+            <input type="text" id="deleteIdentifier" placeholder="Identificador (Boleta, RFC, ID)" required>
             <button id="submitDeleteUser">Eliminar Usuario</button>
             <p id="deleteUserMessage"></p>
         </form>
 
         <form id="createUserForm" style="display: none;">
             <h3>Crear Nuevo Usuario</h3>
-            <input type="text" id="newBoleta" placeholder="Boleta" required>
+            <input type="text" id="newIdentifier" placeholder="Identificador (Boleta, RFC, ID)" required>
             <input type="email" id="newEmail" placeholder="Email" required>
             <input type="password" id="newPassword" placeholder="Contraseña" required>
             <input type="text" id="newNombre" placeholder="Nombre" required>
-            <input type="number" id="newRoleId" placeholder="ID de Rol (opcional)">
+            <input type="number" id="newRoleId" placeholder="ID de Rol (1: Admin, 2: Profesor, 3: Estudiante)">
             <button id="submitCreateUser">Crear Usuario</button>
             <p id="createUserMessage"></p>
         </form>
 
-        <!-- Formulario para subir un solo archivo -->
         <form id="uploadFileForm" style="display: none;">
             <h3>Subir un Archivo</h3>
-            <input type="file" id="singleFile" required> <!-- Campo para seleccionar un archivo -->
+            <input type="file" id="singleFile" required>
             <input type="text" id="singleFilePath" placeholder="Ruta (opcional)">
             <button type="button" id="submitUploadFile">Subir Archivo</button>
             <p id="uploadFileMessage"></p>
-
-            <!-- Barra de progreso para la carga de un archivo -->
             <div id="progressContainer" style="display:none;">
                 <progress id="progressBar" value="0" max="100"></progress>
                 <span id="progressPercent">0%</span>
             </div>
         </form>
 
-        <!-- Formulario para subir múltiples archivos -->
         <form id="uploadMultipleFilesForm" style="display: none;">
             <h3>Subir Múltiples Archivos</h3>
-            <input type="file" id="multipleFiles" multiple required> <!-- Soporte para múltiples archivos -->
+            <input type="file" id="multipleFiles" multiple required>
             <input type="text" id="multipleFilesPath" placeholder="Ruta (opcional)">
             <button type="button" id="submitUploadMultipleFiles">Subir Archivos</button>
             <p id="uploadMultipleFilesMessage"></p>
-
-            <!-- Barra de progreso para la carga de múltiples archivos -->
             <div id="progressContainerMultiple" style="display:none;">
                 <progress id="progressBarMultiple" value="0" max="100"></progress>
                 <span id="progressPercentMultiple">0%</span>
             </div>
         </form>
-        <!-- Contenedor para mostrar la estructura de archivos -->
-        <div id="fileStructureContainer">
+
+        <div id="fileStructureContainer" style="display: none;">
             <pre id="fileTree"></pre>
         </div>
 
-        <!-- Formulario para descargar un archivo -->
         <div id="downloadFileForm" style="display: none;">
             <h3>Descargar un Archivo</h3>
             <input type="text" id="fileToDownload" placeholder="Ruta del archivo a descargar" required>
@@ -104,23 +96,20 @@
             <p id="downloadFileMessage"></p>
         </div>
 
-        <!-- Formulario para descargar una carpeta como ZIP -->
         <div id="downloadFolderForm" style="display: none;">
             <h3>Descargar Carpeta como ZIP</h3>
             <input type="text" id="folderToDownload" placeholder="Ruta de la carpeta a descargar" required>
             <button type="button" id="submitDownloadFolder">Descargar Carpeta</button>
             <p id="downloadFolderMessage"></p>
         </div>
-        
+
         <div id="loadingSpinner" style="display: none;">
             <p>Procesando la descarga... Esto puede tardar unos momentos.</p>
             <div class="spinner"></div>
         </div>
 
-
-
         <p id="responseMessage"></p>
-        <p id="authMessage"></p> <!-- Para mostrar información de autenticación -->
+        <p id="authMessage"></p>
     </div>
     <script src="dashboard.js"></script>
 </body>

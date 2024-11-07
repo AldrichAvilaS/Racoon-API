@@ -1,7 +1,7 @@
 #logica de manejo de logs 
 #Version 0.4
 from flask import request
-from .db import db, APILog, get_user_identifier
+from ..db.db import db, APILog, get_user_identifier
 
 def log_api_request(user_id, operation, container_name=None, object_name=None, status_code=200, error_message=None):
     user_identifier = get_user_identifier(user_id)

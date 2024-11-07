@@ -25,7 +25,7 @@ class User(db.Model):
     delete_date = db.Column(db.DateTime)
 
     # Llave foránea para el rol
-    role_id = db.Column(db.Integer, db.ForeignKey('role.id'), nullable=False)
+    role_id = db.Column(db.Integer, db.ForeignKey('role.role_id'), nullable=False)
     role = db.relationship('Role', backref='users')
 
     def __repr__(self):

@@ -4,15 +4,22 @@ from flask_cors import CORS
 from flask_jwt_extended import JWTManager
 from flask_migrate import Migrate
 from datetime import timedelta
-from .db import init_db, db, User
+from .db.db import init_db, db, User
 
 # Importa y registra los Blueprints
-from .users import users_bp
-from .auth import auth_bp
-from .file import file_bp
-from .groups import groups_bp
-from .events import logs_bp
+from .authorization.auth import auth_bp
 
+from .entitys.users import users_bp
+from .entitys.semester import semester_bp
+from .entitys.group import groups_bp
+from .entitys.academy import academy_bp
+from .entitys.enrollment import enrollment_bp
+from .entitys.subject import subject_bp
+
+from .file.file import file_bp
+
+from .logs.events import logs_bp
+from .notices.notice import notice_bp
 
 def create_app():
     app = Flask(__name__)
@@ -38,10 +45,19 @@ def create_app():
 
     # Registra los blueprints
     app.register_blueprint(users_bp, url_prefix='/users')
-    app.register_blueprint(auth_bp, url_prefix='/auth')
-    app.register_blueprint(file_bp, url_prefix='/file')
+    app.register_blueprint(semester_bp, url_prefix='/semester')
     app.register_blueprint(groups_bp, url_prefix='/groups')
+    app.register_blueprint(academy_bp, url_prefix='/academy')
+    app.register_blueprint(enrollment_bp, url_prefix='/enrollment')
+    app.register_blueprint(subject_bp, url_prefix='/subject')
+    
+    
+    app.register_blueprint(auth_bp, url_prefix='/auth')
+    
+    app.register_blueprint(file_bp, url_prefix='/file')
+
     app.register_blueprint(logs_bp, url_prefix='/logs')
 
-    #inicializar openstack auth_openstack
+    app.register_blueprint(notice_bp, url_prefix='/notices')
+    
     return app

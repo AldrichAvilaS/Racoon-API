@@ -16,7 +16,7 @@ def get_current_user():
 # Registrar un nuevo profesor
 @teacher_bp.route('/', methods=['POST'])
 @jwt_required()
-@role_required(0, 1)  # Solo roles específicos pueden crear profesores
+#@role_required(0, 1)  # Solo roles específicos pueden crear profesores
 def add_teacher():
     current_user = get_current_user()
     
@@ -65,7 +65,7 @@ def add_teacher():
 # Obtener todos los profesores
 @teacher_bp.route('/', methods=['GET'])
 @jwt_required()
-@role_required(0, 1)  # Solo roles específicos pueden acceder
+#@role_required(0, 1)  # Solo roles específicos pueden acceder
 def get_teachers():
     current_user = get_current_user()
     # Obtenemos todos los usuarios con rol de profesor
@@ -81,7 +81,7 @@ def get_teachers():
 # Obtener un profesor por ID
 @teacher_bp.route('/<int:user_id>', methods=['GET'])
 @jwt_required()
-@role_required(0, 1)  # Solo roles específicos pueden acceder
+#@role_required(0, 1)  # Solo roles específicos pueden acceder
 def get_teacher(user_id):
     current_user = get_current_user()
     teacher = User.query.get(user_id)
@@ -100,7 +100,7 @@ def get_teacher(user_id):
 # Actualizar un profesor
 @teacher_bp.route('/<int:user_id>', methods=['PUT'])
 @jwt_required()
-@role_required(0, 1)  # Solo roles específicos pueden actualizar
+#@role_required(0, 1)  # Solo roles específicos pueden actualizar
 def update_teacher(user_id):
     current_user = get_current_user()
     data = request.get_json()
@@ -127,7 +127,7 @@ def update_teacher(user_id):
 # Eliminar un profesor
 @teacher_bp.route('/<int:user_id>', methods=['DELETE'])
 @jwt_required()
-@role_required(0)  # Solo usuarios con rol 0 pueden acceder
+#@role_required(0)  # Solo usuarios con rol 0 pueden acceder
 def delete_teacher(user_id):
     current_user = get_current_user()
     teacher = User.query.get(user_id)
@@ -146,7 +146,7 @@ def delete_teacher(user_id):
 # Obtener información del profesor autenticado
 @teacher_bp.route('/info', methods=['GET'])
 @jwt_required()
-@role_required(2)  # Solo el profesor puede acceder a su información
+#@role_required(2)  # Solo el profesor puede acceder a su información
 def info_teacher():
     current_user = get_current_user()
     if current_user.role_id != 2:
