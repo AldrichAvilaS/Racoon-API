@@ -9,6 +9,9 @@ from ..authorization.decorators import role_required
 
 academy_bp = Blueprint('academy', __name__)
 
+#ruta del endpoint | metodo http | funcion a ejecutar | json que recibe | variables que regresa | codigo de respuesta
+#http://localhost:5000/academy/ | POST | create_academy | academy | message, academy_id | 201
+
 # Crear una nueva academia
 @academy_bp.route('/', methods=['POST'])
 @jwt_required()
@@ -49,7 +52,9 @@ def create_academy():
         log_api_request(get_jwt_identity(), 'POST - Error general', "academies", "none", 500, error_message=str(e))
         return jsonify({"error": str(e)}), 500
     
-    
+#ruta del endpoint | metodo http | funcion a ejecutar | json que recibe | variables que regresa | codigo de respuesta
+#http://localhost:5000/academy/ | GET | get_academies | No requiere datos | academies_data | 200
+
 # Obtener todas las academias
 @academy_bp.route('/', methods=['GET'])
 @jwt_required()
@@ -79,6 +84,9 @@ def get_academies():
         log_api_request(get_jwt_identity(), 'GET - Error al obtener academias', "academies", "none", 500, error_message=str(e))
         return jsonify({"error": "Error al obtener academias."}), 500
 
+
+#ruta del endpoint | metodo http | funcion a ejecutar | json que recibe | variables que regresa | codigo de respuesta
+#http://localhost:5000/academy/<int:academy_id> | GET | get_academy | No requiere datos | academy_data | 200
 # Obtener una academia por ID
 @academy_bp.route('/<int:academy_id>', methods=['GET'])
 @jwt_required()
@@ -107,6 +115,8 @@ def get_academy(academy_id):
         log_api_request(get_jwt_identity(), 'GET - Error al obtener academia', "academies", str(academy_id), 500, error_message=str(e))
         return jsonify({"error": "Error al obtener la academia."}), 500
 
+#ruta del endpoint | metodo http | funcion a ejecutar | json que recibe | variables que regresa | codigo de respuesta
+#http://localhost:5000/academy/<int:academy_id> | PUT | update_academy | academy | message | 200
 
 # Actualizar una academia
 @academy_bp.route('/<int:academy_id>', methods=['PUT'])
@@ -135,6 +145,10 @@ def update_academy(academy_id):
     log_api_request(get_jwt_identity(), 'PUT - Academia actualizada con éxito', "academies", str(academy_id), 200)
     return jsonify({"message": "Academia actualizada con éxito"}), 200
 
+
+#ruta del endpoint | metodo http | funcion a ejecutar | json que recibe | variables que regresa | codigo de respuesta
+#http://localhost:5000/academy/<int:academy_id> | DELETE | delete_academy | No requiere datos | message | 200
+
 # Eliminar una academia
 @academy_bp.route('/<int:academy_id>', methods=['DELETE'])
 @jwt_required()
@@ -149,6 +163,10 @@ def delete_academy(academy_id):
     db.session.commit()
     log_api_request(get_jwt_identity(), 'DELETE - Academia eliminada', "academies", str(academy_id), 200)
     return jsonify({"message": "Academia eliminada con éxito"}), 200
+
+
+#ruta del endpoint | metodo http | funcion a ejecutar | json que recibe | variables que regresa | codigo de respuesta
+#http://localhost:5000/academy/info | GET | info_academy | No requiere datos | academy_data | 200
 
 # Obtener información de la academia autenticada
 @academy_bp.route('/info', methods=['GET'])

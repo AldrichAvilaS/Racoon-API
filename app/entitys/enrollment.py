@@ -8,6 +8,9 @@ from ..authorization.decorators import role_required
 #crear el blueprint para las materias
 enrollment_bp = Blueprint('enrollment', __name__)
 
+#ruta del endpoint | metodo http | funcion a ejecutar | json que recibe | variables que regresa | codigo de respuesta
+#http://localhost:5000/enrollment/enroll | POST | create_enrollment | enrollment | message, enrollment_id | 201
+
 # Endpoint para crear una nueva inscripción
 @enrollment_bp.route('/enroll', methods=['POST'])
 @jwt_required()  # Requiere autenticación con JWT
@@ -68,6 +71,10 @@ def create_enrollment():
         log_api_request(user.id, f"POST - Crear Inscripción - Error: {str(e)}", 500)
         return jsonify({"error": str(e)}), 500
 
+
+#ruta del endpoint | metodo http | funcion a ejecutar | json que recibe | variables que regresa | codigo de respuesta
+#http://localhost:5000/enrollment/get-enrolled-students | GET | get_enrolled_students | subject_id | students | 200
+
 #Endpoint para obtener alumnos inscritos en una materia
 @enrollment_bp.route('/get-enrolled-students', methods=['GET'])
 @jwt_required()  # Requiere autenticación con JWT
@@ -110,6 +117,10 @@ def get_enrolled_students():
     
     log_api_request(user.id, f"GET - Alumnos inscritos en la materia {subject_id}", 200)
     return jsonify({"students": students}), 200
+
+
+#ruta del endpoint | metodo http | funcion a ejecutar | json que recibe | variables que regresa | codigo de respuesta
+#http://localhost:5000/enrollment/get-enrolled-subjects | GET | get_enrolled_subjects | No requiere datos | subjects | 200
 
 #Endpoint para obtener materias inscritas por un alumno
 @enrollment_bp.route('/get-enrolled-subjects', methods=['GET'])

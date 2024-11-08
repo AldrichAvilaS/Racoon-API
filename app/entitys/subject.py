@@ -8,6 +8,9 @@ from ..authorization.decorators import role_required
 #crear el blueprint para las materias
 subject_bp = Blueprint('subject', __name__)
 
+
+#ruta del endpoint | metodo http | funcion a ejecutar | json que recibe | variables que regresa | codigo de respuesta
+#http://localhost:5000/subject/create-subject | POST | create_subject | subject | message, subject_id | 201
 # Endpoint para crear una nueva materia
 @subject_bp.route('/create-subject', methods=['POST'])
 @jwt_required()  # Requiere autenticación con JWT
@@ -71,6 +74,9 @@ def create_subject():
         log_api_request(user.id, f"POST - Crear Materia - Error: {str(e)}", 500)
         return jsonify({"error": str(e)}), 500
 
+
+#ruta del endpoint | metodo http | funcion a ejecutar | json que recibe | variables que regresa | codigo de respuesta
+#http://localhost:5000/subject/subjects | GET | get_subjects | No requiere datos | subjects_data | 200
 # Endpoint para obtener todas las materias de una academia
 @subject_bp.route('/subjects', methods=['GET'])
 @jwt_required()  # Requiere autenticación con JWT
@@ -100,6 +106,9 @@ def get_subjects():
     log_api_request(user.id, f"GET - Obtener materias de la academia (ID: {user.academy_id})", 200)
     return jsonify(subjects_data), 200
 
+
+#ruta del endpoint | metodo http | funcion a ejecutar | json que recibe | variables que regresa | codigo de respuesta
+#http://localhost:5000/subject/subject-by-group | GET | get_subject_by_group | group_id | subject_data | 200
 #endpoint para obtener una materia por grupo
 @subject_bp.route('/subject-by-group', methods=['GET'])
 @jwt_required()  # Requiere autenticación con JWT
@@ -141,6 +150,9 @@ def get_subject_by_group():
     log_api_request(user.id, f"GET - Materia por Grupo (ID: {group_id})", 200)
     return jsonify(subject_data), 200
 
+
+#ruta del endpoint | metodo http | funcion a ejecutar | json que recibe | variables que regresa | codigo de respuesta
+#http://localhost:5000/subject/get-swift-scope | GET | get_swift_scope | subject_id | swift_scope | 200
 #endpoint para obtener el contenedor swift_scope de una materia
 @subject_bp.route('/get-swift-scope', methods=['GET'])
 @jwt_required()  # Requiere autenticación con JWT

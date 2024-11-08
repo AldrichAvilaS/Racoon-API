@@ -31,6 +31,9 @@ def get_current_user():
 
     return user
 
+#ruta del endpoint | metodo http | funcion a ejecutar | json que recibe | variables que regresa | codigo de respuesta
+#http://localhost:5000/groups/create-group | POST | create_group | group | message, group_id | 201
+
 # Endpoint para crear un nuevo grupo
 @groups_bp.route('/create-group', methods=['POST'])
 @jwt_required()  # Requiere autenticación con JWT
@@ -77,6 +80,9 @@ def create_group():
         log_api_request(user.id, f"POST - Crear Grupo - Error: {str(e)}", 500)  # Log opcional
         return jsonify({"error": str(e)}), 500
  
+#ruta del endpoint | metodo http | funcion a ejecutar | json que recibe | variables que regresa | codigo de respuesta
+#http://localhost:5000/groups/ | GET | get_groups | semester_id | groups_data | 200
+
 # Endpoint para obtener todos los grupos de un semestre
 @groups_bp.route('/groups/<int:semester_id>', methods=['GET'])
 @jwt_required()  # Requiere autenticación con JWT

@@ -27,7 +27,7 @@ def get_current_user():
                 user = academy.main_teacher.user
             else:
                 # Asumimos que los administradores se autentican con user.id
-                user = User.query.filter_by(id=identifier, role_id=0).first()
+                user = User.query.filter_by(id=identifier, role_id=get_role_id_by_name('Administrador')).first()
 
     return user
 
@@ -47,6 +47,8 @@ def get_role_name_by_value(role_value):
     return role_mapping.get(role_value, None)  # Retorna None si el valor no está en el diccionario
 
 
+#ruta del endpoint | metodo http | funcion a ejecutar | json que recibe | variables que regresa | codigo de respuesta
+#http://localhost:5000/users/ | POST | add_user | {username, email, password, role_id} | message, error | 201, 400, 500
 # Registrar un nuevo usuario
 @users_bp.route('/', methods=['POST'])
 @jwt_required()
@@ -120,6 +122,8 @@ def add_user():
         log_api_request(get_jwt_identity(), 'POST - Error general', "users", "none", 500, error_message=str(e))
         return jsonify({"error": str(e)}), 500
 
+#ruta del endpoint | metodo http | funcion a ejecutar | json que recibe | variables que regresa | codigo de respuesta
+#http://localhost:5000/users/ | GET | get_users | No requiere datos | users_data | 200
 # Obtener todos los usuarios
 @users_bp.route('/', methods=['GET'])
 @jwt_required()
@@ -151,6 +155,8 @@ def get_users():
 
     return jsonify(users_data), 200
 
+#ruta del endpoint | metodo http | funcion a ejecutar | json que recibe | variables que regresa | codigo de respuesta
+#http://localhost:5000/users/<identifier> | GET | get_user | No requiere datos | user_info | 200, 404
 # Obtener un usuario por identificador
 @users_bp.route('/<identifier>', methods=['GET'])
 @jwt_required()
@@ -190,6 +196,8 @@ def get_user(identifier):
 
     return jsonify(user_info), 200
 
+#ruta del endpoint | metodo http | funcion a ejecutar | json que recibe | variables que regresa | codigo de respuesta
+#http://localhost:5000/users/<identifier> | PUT | update_user | {email, username, password, boleta, rfc} | message | 200
 # Actualizar un usuario
 @users_bp.route('/<identifier>', methods=['PUT'])
 @jwt_required()
@@ -232,6 +240,8 @@ def update_user(identifier):
     log_api_request(get_jwt_identity(), 'PUT - Usuario actualizado con éxito', "users", identifier, 200)
     return jsonify({"message": "Usuario actualizado con éxito"}), 200
 
+#ruta del endpoint | metodo http | funcion a ejecutar | json que recibe | variables que regresa | codigo de respuesta
+#http://localhost:5000/users/<identifier> | DELETE | delete_user | No requiere datos | message | 200
 # Eliminar un usuario
 @users_bp.route('/<identifier>', methods=['DELETE'])
 @jwt_required()
@@ -266,6 +276,8 @@ def delete_user(identifier):
     log_api_request(get_jwt_identity(), 'DELETE - Usuario eliminado', "users", identifier, 200)
     return jsonify({"message": "Usuario eliminado con éxito"}), 200
 
+#ruta del endpoint | metodo http | funcion a ejecutar | json que recibe | variables que regresa | codigo de respuesta
+#http://localhost:5000/users/info | GET | info_user | No requiere datos | user_info | 200
 # Obtener los datos públicos del usuario autenticado
 @users_bp.route('/info', methods=['GET'])
 @jwt_required()
