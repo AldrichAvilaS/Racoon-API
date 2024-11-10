@@ -58,7 +58,7 @@ def add_user():
     data = request.get_json()
 
     # Validar datos requeridos
-    required_fields = ['username', 'email', 'password', 'role_id']
+    required_fields = ['username', 'email', 'role_id']
     if not data or not all(field in data for field in required_fields):
         log_api_request(get_jwt_identity(), 'POST - Agregar Usuario - Datos incompletos', "users", "none", 400)
         return jsonify({"error": "Datos incompletos"}), 400

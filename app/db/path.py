@@ -1,3 +1,3 @@
-store_path = 'D:/pruebas/files/'
+store_path = 'F:/files/'
 
-zip_path = 'D:/pruebas/files/zip/'
+zip_path = 'F:/files/zip/'

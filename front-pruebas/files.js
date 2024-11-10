@@ -32,12 +32,13 @@ document.addEventListener('DOMContentLoaded', function () {
         const dirPath = encodeURIComponent(path);  // Codificar la ruta en la URL
 
         try {
-            const response = await fetch(`http://127.0.0.1:5000/file/list?dirPath=${dirPath}`, {
-                method: 'GET',
+            const response = await fetch(`http://127.0.0.1:5000/file/list`, {
+                method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`  // Agregar el token JWT
                 },
+                body: JSON.stringify({ dirPath })
             });
 
             const data = await response.json();
@@ -135,6 +136,7 @@ document.addEventListener('DOMContentLoaded', function () {
     // Función para manejar el clic en una carpeta y navegar dentro de ella
     function handleFolderClick(folder) {
         const newPath = currentPath ? `${currentPath}/${folder}` : folder;
+        alert('Carpeta seleccionada: ' + newPath);
         fetchDirectoryContent(newPath);  // Solicitar el contenido de la nueva carpeta
     }
 
