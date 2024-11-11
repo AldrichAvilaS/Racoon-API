@@ -187,13 +187,15 @@ def download_file():
         return jsonify({"error": "Usuario no autenticado"}), 401
 
     file_path = request.args.get('file_path')
+    print("file_path: ", file_path)
     if not file_path:
         return jsonify({"error": "No se proporcionó la ruta del archivo"}), 400
 
     try:
         user_directory = get_user_directory(get_user_identifier(user.id))
+        print("user_directory: ", user_directory)
         full_file_path = secure_path(user_directory, file_path)
-
+        print("full_file_path: ", full_file_path)
         if not os.path.exists(full_file_path):
             return jsonify({"error": "El archivo no existe"}), 404
 
@@ -218,7 +220,7 @@ def download_folder():
     if not folder_path:
         return jsonify({"error": "No se proporcionó la ruta de la carpeta"}), 400
     
-    #print(folder_path, ": esta es la ruta de la carpeta")
+    print(folder_path, ": esta es la ruta de la carpeta")
     # Generar la ruta completa donde se encuentra la carpeta del usuario
     full_folder_path = os.path.join(store_path + str(get_user_identifier(user.id)) +'/'+ folder_path)
     
@@ -279,6 +281,7 @@ def create_folder():
         return jsonify({"error": "Usuario no autenticado"}), 401
 
     data = request.get_json()
+    print("data: ", data)
     folder_name = data.get('folder_name')
     parent_dir = data.get('parent_dir', '')
 
@@ -287,15 +290,18 @@ def create_folder():
 
     try:
         user_directory = get_user_directory(get_user_identifier(user.id))
+        print("user_directory: ", user_directory)
         parent_directory = secure_path(user_directory, parent_dir)
+        print("parent_directory: ", parent_directory)
         new_folder_path = os.path.join(parent_directory, folder_name)
+        print("new_folder_path: ", new_folder_path)
 
         if os.path.exists(new_folder_path):
             return jsonify({"error": "La carpeta ya existe"}), 400
 
         # Crear la nueva carpeta
         os.makedirs(new_folder_path)
-        return jsonify({"message": f"Carpeta '{folder_name}' creada exitosamente"}), 201
+        return jsonify({"message": f"Carpeta '{folder_name}' creada exitosamente"}), 200
 
     except ValueError as ve:
         return jsonify({"error": str(ve)}), 403

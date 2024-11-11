@@ -80,7 +80,7 @@ def get_directory_structure(root_dir):
     return structure
 
 def bytes_to_megabytes(size_in_bytes):
-    return round(size_in_bytes / (1024 * 1024), 2)  # 1 MB = 1024 * 1024 bytes
+    return round(size_in_bytes / (1024), 2)  # 1 MB = 1024 * 1024 bytes
 
 
 # Función que obtiene la estructura de directorios y archivos de una carpeta específica
@@ -125,13 +125,16 @@ def create_user_directory(user):
 def secure_path(user_directory, relative_path):
     # Convertir user_directory y relative_path a cadenas
     user_directory = str(user_directory)
+    print(f"User Directory: {user_directory}")
     relative_path = os.path.normpath(relative_path)
 
     # Si el relative_path es '.' (directorio actual), no se necesita ningún ajuste
-    if relative_path == '.':
+    if relative_path == '.' or relative_path == '':  # Si es una cadena vacía, se asume el directorio actual
+        print("esta en la raiz")
         full_path = user_directory
     else:
-        full_path = os.path.normpath(os.path.join(user_directory, relative_path))
+        print("no esta en la raiz")
+        full_path = os.path.normpath(os.path.join(user_directory + relative_path))
 
     # Normalizar las rutas para asegurar consistencia en las barras invertidas
     print(f"Relative Path: {relative_path}")
@@ -140,7 +143,7 @@ def secure_path(user_directory, relative_path):
 
     # Verificar que la ruta esté dentro del directorio del usuario
     common_path = os.path.commonpath([full_path, user_directory])
-    print(f"Common Path: {common_path}")
+    # print(f"Common Path: {common_path}")
 
     # Convertimos ambas rutas a rutas absolutas
     user_directory_abs = os.path.abspath(user_directory)

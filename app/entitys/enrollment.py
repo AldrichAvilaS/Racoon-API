@@ -116,7 +116,7 @@ def get_enrolled_students():
             })
     
     log_api_request(user.id, f"GET - Alumnos inscritos en la materia {subject_id}", 200)
-    return jsonify({"students": students}), 200
+    return jsonify(students), 200
 
 
 #ruta del endpoint | metodo http | funcion a ejecutar | json que recibe | variables que regresa | codigo de respuesta
@@ -150,4 +150,4 @@ def get_enrolled_subjects():
             })
     
     log_api_request(user.id, "GET - Materias inscritas por el estudiante", 200)
-    return jsonify({"subjects": subjects}), 200
+    return jsonify(subjects), 200

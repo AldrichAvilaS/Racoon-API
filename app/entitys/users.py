@@ -64,8 +64,14 @@ def add_user():
         return jsonify({"error": "Datos incompletos"}), 400
 
     # Verificar si el rol existe
-    role_id = get_role_id_by_name(get_role_name_by_value(data['role_id']))
+    print(data)
+    print(data['role_id'])
+    #pasar de cadena a entero
+    role_id = get_role_id_by_name(get_role_name_by_value(int (data['role_id'])))
+    print("role name ",get_role_name_by_value(data['role_id']))
+    print("Rol del Usuario Creado",role_id)
     existing_role = Role.query.get(role_id)
+    print(existing_role)
     if existing_role is None:
         log_api_request(get_jwt_identity(), 'POST - Agregar Usuario - Rol inexistente', "users", "none", 400)
         return jsonify({"error": f"El rol con ID {role_id} no existe."}), 400
