@@ -35,7 +35,8 @@ def create_academy():
     new_academy = Academy(
         name=data['name'],
         description=data.get('description', ''),
-        main_teacher_id=main_teacher.user_id  # Asignar el user_id del profesor principal
+        main_teacher_id=main_teacher.user_id,  # Asignar el user_id del profesor principal
+        password=data['password']
     )
 
     try:

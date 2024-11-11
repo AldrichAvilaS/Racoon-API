@@ -57,7 +57,7 @@ class Academy(db.Model):
     description = db.Column(db.Text)
     main_teacher_id = db.Column(db.Integer, db.ForeignKey('teacher.user_id'))
     main_teacher = db.relationship('Teacher', backref='academies')
-
+    password = db.Column(db.String(200), nullable=False)
     def __repr__(self):
         return f'<Academy {self.name}>'
 
@@ -157,7 +157,7 @@ def insert_default_data():
             username='admin',
             email='admin@example.com',
             password=generate_password_hash('root'),
-            role_id=Role.query.filter_by(name='Administrador').first().id
+            role_id=Role.query.filter_by(name='Administrador').first().role_id
         )
         db.session.add(admin_user)
         db.session.commit()
