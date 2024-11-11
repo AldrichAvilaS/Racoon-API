@@ -2,12 +2,15 @@ document.addEventListener('DOMContentLoaded', function () {
     const gridContainer = document.getElementById('gridContainer');
     const downloadButton = document.getElementById('downloadButton');
     const deleteButton = document.getElementById('deleteButton');
+    const moveButton = document.getElementById('moveButton');
     const backButton = document.getElementById('backButton');
     const newFolder = document.getElementById('newFolder');
     const downloadCurrentFolderButton = document.getElementById('downloadCurrentFolderButton');
+    const deleteCurrentFolderButton = document.getElementById('deleteCurrentFolderButton');
     let selectedItem = null;
     let currentPath = '';
-
+    let itemToMove = null;
+    let isSelectingDestination = false;
     // Elemento para mostrar el estado de descarga
     const downloadStatus = document.createElement('div');
     downloadStatus.id = 'downloadStatus';
@@ -30,15 +33,14 @@ document.addEventListener('DOMContentLoaded', function () {
     async function fetchDirectoryContent(path = '') {
         const token = localStorage.getItem('access_token');
         const dirPath = encodeURIComponent(path);  // Codificar la ruta en la URL
-
         try {
-            const response = await fetch(`http://127.0.0.1:5000/file/list`, {
+            const response = await fetch('http://127.0.0.1:5000/file/list', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`  // Agregar el token JWT
                 },
-                body: JSON.stringify({ dirPath })
+                body: JSON.stringify({ dirPath: path })  // Enviar la ruta en el cuerpo de la solicitud
             });
 
             const data = await response.json();
@@ -95,15 +97,22 @@ document.addEventListener('DOMContentLoaded', function () {
         }
 
         // Mostrar archivos
+
         if (structure.files && structure.files.length > 0) {
             structure.files.forEach(file => {
                 const fileItem = document.createElement('div');
                 fileItem.classList.add('grid-item');
-                fileItem.textContent = file;
+
+                // Crear una estructura de visualización para el archivo con fecha, nombre, y tamaño
+                fileItem.innerHTML = `
+            <strong>${file.path}</strong><br>
+            Fecha: ${file.date}<br>
+            Tamaño: ${file.size} MB
+        `;
                 fileItem.style.backgroundColor = '#e6e6e6';  // Color para archivos
                 fileItem.dataset.type = 'file';
-
-                fileItem.addEventListener('click', () => handleSelection(fileItem, file));
+                fileItem.dataset.name = file.path;
+                fileItem.addEventListener('click', () => handleSelection(file.path));
 
                 gridContainer.appendChild(fileItem);
             });
@@ -114,31 +123,44 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     // Función para manejar la selección de un archivo o carpeta
-    function handleSelection(item, name) {
+    function handleSelection(name) {
         // Desactivar la selección previa
         if (selectedItem) {
             selectedItem.style.backgroundColor = '#fff';
         }
 
-        // Activar la nueva selección
-        selectedItem = item;
-        item.style.backgroundColor = '#d0e1ff';
+        // Buscar el elemento seleccionado en la cuadrícula
+        const items = Array.from(gridContainer.children);
+        selectedItem = items.find(item => item.textContent.includes(name));
+        if (selectedItem) {
+            selectedItem.style.backgroundColor = '#d0e1ff';
+        }
 
         // Habilitar botones
         downloadButton.disabled = false;
         deleteButton.disabled = false;
+        moveButton.disabled = false;
 
         // Actualizar los textos de los botones
         downloadButton.textContent = `Descargar ${name}`;
         deleteButton.textContent = `Eliminar ${name}`;
+        moveButton.textContent = `Mover ${name}`;
     }
 
-    // Función para manejar el clic en una carpeta y navegar dentro de ella
+
+    // Modifica la función de selección de carpetas para manejar el destino de movimiento
     function handleFolderClick(folder) {
         const newPath = currentPath ? `${currentPath}/${folder}` : folder;
-        alert('Carpeta seleccionada: ' + newPath);
-        fetchDirectoryContent(newPath);  // Solicitar el contenido de la nueva carpeta
+
+        if (isSelectingDestination && itemToMove) {
+            moveItem(itemToMove, newPath); // Llama a la función para mover el elemento
+            isSelectingDestination = false; // Desactiva el modo de selección de destino
+            itemToMove = null; // Resetea el archivo o carpeta a mover
+        } else {
+            fetchDirectoryContent(newPath); // Si no estamos en modo de selección, navega a la carpeta
+        }
     }
+
 
     // Función para crear una nueva carpeta
     newFolder.addEventListener('click', function () {
@@ -190,10 +212,95 @@ document.addEventListener('DOMContentLoaded', function () {
         downloadCurrentFolderButton.disabled = false;  // Habilitar el botón de nuevo
     });
 
+    // Función para eliminar la carpeta actual 
+    deleteCurrentFolderButton.addEventListener('click', async function () {
+        deleteCurrentFolderButton.disabled = true;  // Deshabilitar el botón
+        showDownloadStatus('Procesando la eliminación de la carpeta...');  // Mostrar mensaje
+        await deletepath(currentPath);
+        hideDownloadStatus();
+        deleteCurrentFolderButton.disabled = false;  // Habilitar el botón de nuevo
+    });
+
+    // Función para mover un archivo o carpeta
+    moveButton.addEventListener('click', function () {
+        if (selectedItem) {
+            itemToMove = selectedItem.dataset.name; // Almacena el archivo o carpeta a mover
+            isSelectingDestination = true; // Habilita el modo de selección de destino
+            alert("Selecciona la carpeta de destino para mover el elemento seleccionado.");
+        } else {
+            alert("Selecciona un archivo o carpeta para mover.");
+        }
+    });
+
+// Función para mover un archivo o carpeta
+async function moveItem(itemPath, destinationPath) {
+    const token = localStorage.getItem('access_token');
+    const data = {
+        source_path: currentPath ? `${currentPath}/${itemPath}` : itemPath,
+        destination_path: destinationPath
+    };
+
+    try {
+        const response = await fetch('http://127.0.0.1:5000/file/move', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify(data)
+        });
+
+        const result = await response.json();
+
+        if (response.ok) {
+            alert(result.message || 'Elemento movido exitosamente.');
+            fetchDirectoryContent(currentPath); // Recargar el contenido actual del directorio
+        } else {
+            console.error(result.error);
+            alert(result.error || 'Error al mover el archivo o carpeta.');
+        }
+    } catch (error) {
+        console.error('Error al mover el archivo o carpeta:', error);
+    }
+}
+
+
+
+    // Función para eliminar la carpeta actual
+    async function deletepath(folderPath) {
+        const token = localStorage.getItem('access_token');
+        const data = {
+            target_path: folderPath
+        };
+
+        try {
+            const response = await fetch('http://127.0.0.1:5000/file/delete', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`  // Incluir el token JWT
+                },
+                body: JSON.stringify(data)
+            });
+
+            const result = await response.json();
+
+            if (response.ok) {
+                console.log(result.message);
+                fetchDirectoryContent('');  // Recargar el contenido actual del directorio
+            } else {
+                console.error(result.error);
+                alert(result.error || 'Error al eliminar la carpeta.');
+            }
+        } catch (error) {
+            console.error('Error al eliminar la carpeta:', error);
+        }
+    }
+
     // Función para manejar la descarga del archivo o carpeta seleccionada
     downloadButton.addEventListener('click', async function () {
         if (selectedItem) {
-            const itemName = selectedItem.textContent;
+            const itemName = selectedItem.dataset.name;
             const itemType = selectedItem.dataset.type;
             const fullPath = currentPath ? `${currentPath}/${itemName}` : itemName;
 
@@ -206,6 +313,47 @@ document.addEventListener('DOMContentLoaded', function () {
             hideDownloadStatus();  // Ocultar mensaje de descarga una vez que se complete
         }
     });
+
+    // Función para manejar la descarga del archivo o carpeta seleccionada
+    deleteButton.addEventListener('click', async function () {
+        if (selectedItem) {
+            const itemName = selectedItem.dataset.name;
+            const itemType = selectedItem.dataset.type;
+            const fullPath = currentPath ? `${currentPath}/${itemName}` : itemName;
+
+            showDownloadStatus(`Descargando ${itemName}...`);  // Mostrar mensaje de descarga
+            await deleteItem(fullPath, itemType);
+        }
+    });
+    // Función para eliminar un archivo o carpeta
+    async function deleteItem(itemPath, itemType) {
+        const token = localStorage.getItem('access_token');
+        const data = {
+            target_path: itemPath
+        };
+
+        try {
+            const response = await fetch('http://127.0.0.1:5000/file/delete', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`  // Incluir el token JWT
+                },
+                body: JSON.stringify(data)
+            });
+
+            const result = await response.json();
+            if (response.ok) {
+                console.log(result.message);
+                fetchDirectoryContent(currentPath);  // Recargar el contenido actual del directorio
+            } else {
+                console.error(result.error);
+                alert(result.error || 'Error al eliminar el archivo o carpeta.');
+            }
+        } catch (error) {
+            console.error('Error al eliminar el archivo o carpeta:', error);
+        }
+    }
 
     // Función para descargar un archivo
     async function downloadFile(filePath) {

@@ -120,14 +120,42 @@ def create_user_directory(user):
         os.makedirs(user_directory)
     return user_directory
 
+
 # Función para asegurar rutas y prevenir path traversal
 def secure_path(user_directory, relative_path):
-    # Combinar y normalizar la ruta
-    full_path = os.path.normpath(os.path.join(user_directory, relative_path))
+    # Convertir user_directory y relative_path a cadenas
+    user_directory = str(user_directory)
+    relative_path = os.path.normpath(relative_path)
+
+    # Si el relative_path es '.' (directorio actual), no se necesita ningún ajuste
+    if relative_path == '.':
+        full_path = user_directory
+    else:
+        full_path = os.path.normpath(os.path.join(user_directory, relative_path))
+
+    # Normalizar las rutas para asegurar consistencia en las barras invertidas
+    print(f"Relative Path: {relative_path}")
+    print(f"Full Path: {full_path}")
+    print(f"User Directory: {user_directory}")
+
     # Verificar que la ruta esté dentro del directorio del usuario
-    if os.path.commonprefix([full_path, user_directory]) != user_directory:
+    common_path = os.path.commonpath([full_path, user_directory])
+    print(f"Common Path: {common_path}")
+
+    # Convertimos ambas rutas a rutas absolutas
+    user_directory_abs = os.path.abspath(user_directory)
+    full_path_abs = os.path.abspath(full_path)
+    
+    # Comparamos las rutas absolutas
+    print(f"User Directory (Absoluta): {user_directory_abs}")
+    print(f"Full Path (Absoluto): {full_path_abs}")
+
+    if not full_path_abs.startswith(user_directory_abs):
+        print("Acceso no autorizado: la ruta no está dentro del directorio asignado")
         raise ValueError("Intento de acceso no autorizado fuera del directorio asignado")
+
     return full_path
+
 
 # Función para obtener el directorio base del usuario
 def get_user_directory(user_identifier):

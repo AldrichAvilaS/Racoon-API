@@ -2,6 +2,7 @@
 # Versión 0.4 - Proporcionar directorios y rutas
 from io import BytesIO
 import os, base64, hashlib
+import shutil
 import threading
 import time
 import uuid
@@ -48,11 +49,14 @@ def upload_file():
         # Generar la ruta completa donde se guardará el archivo
         save_directory = get_save_directory(user, file_path)
         print("save_directory con solo limpieza de espacios: ", save_directory)
+        
         # Obtener y asegurar el directorio donde se guardará el archivo
-        user_directory = get_user_directory(user)
+        user_directory = get_user_directory(get_user_identifier(user.id))
+        print("user_directory: ", user_directory)
         save_directory = secure_path(user_directory, file_path)
         print("save_directory: ", save_directory)
-        print("user_directory: ", user_directory)
+
+        
         os.makedirs(save_directory, exist_ok=True)  # Crear el directorio si no existe
         
         save_path = os.path.join(save_directory, file_name)
@@ -68,7 +72,7 @@ def upload_file():
     except OSError as e:
         return jsonify({"error": f"Error de sistema: {str(e)}"}), 500
     except Exception as e:
-        log_api_request(user.boleta, "Error en la subida de archivo", data.get('path', 'default_container'), data.get('filename', 'unknown'), 500, error_message=str(e))
+        log_api_request(get_jwt_identity(), "Error en la subida de archivo", file_path, file_name, 500, error_message=str(e))
         return jsonify({"error": str(e)}), 500
 
 # Ruta para recibir múltiples archivos
@@ -174,7 +178,6 @@ def upload_file_chunk():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-
 # Ruta para descargar un archivo
 @file_bp.route('/download', methods=['GET'])
 @jwt_required()
@@ -188,7 +191,7 @@ def download_file():
         return jsonify({"error": "No se proporcionó la ruta del archivo"}), 400
 
     try:
-        user_directory = get_user_directory(user)
+        user_directory = get_user_directory(get_user_identifier(user.id))
         full_file_path = secure_path(user_directory, file_path)
 
         if not os.path.exists(full_file_path):
@@ -217,9 +220,9 @@ def download_folder():
     
     #print(folder_path, ": esta es la ruta de la carpeta")
     # Generar la ruta completa donde se encuentra la carpeta del usuario
-    full_folder_path = os.path.join(store_path + str(get_user_identifier(user.id)) + folder_path)
+    full_folder_path = os.path.join(store_path + str(get_user_identifier(user.id)) +'/'+ folder_path)
     
-    #print("full: ",full_folder_path)
+    print("full: ",full_folder_path)
     
     
     # Verificar si la carpeta existe
@@ -267,7 +270,6 @@ def download_folder():
     except Exception as e:
         return jsonify({"error": f"Error al comprimir la carpeta: {str(e)}"}), 500
     
-
 # Ruta para crear una nueva carpeta
 @file_bp.route('/create-folder', methods=['POST'])
 @jwt_required()
@@ -284,7 +286,7 @@ def create_folder():
         return jsonify({"error": "No se proporcionó el nombre de la carpeta"}), 400
 
     try:
-        user_directory = get_user_directory(user)
+        user_directory = get_user_directory(get_user_identifier(user.id))
         parent_directory = secure_path(user_directory, parent_dir)
         new_folder_path = os.path.join(parent_directory, folder_name)
 
@@ -316,8 +318,10 @@ def move_file_or_folder():
         return jsonify({"error": "No se proporcionaron las rutas de origen o destino"}), 400
 
     try:
-        user_directory = get_user_directory(user)
+        user_directory = get_user_directory(get_user_identifier(user.id))
+        print("secure de full_source_path: ")
         full_source_path = secure_path(user_directory, source_path)
+        print("secure de full_destination_path: ")
         full_destination_path = secure_path(user_directory, destination_path)
 
         if not os.path.exists(full_source_path):
@@ -326,7 +330,7 @@ def move_file_or_folder():
         # Crear el directorio de destino si no existe
         os.makedirs(os.path.dirname(full_destination_path), exist_ok=True)
         # Mover el archivo o carpeta
-        os.rename(full_source_path, full_destination_path)
+        shutil.move(full_source_path, full_destination_path)
 
         log_api_request(get_jwt_identity(), "Movimiento exitoso", "move", source_path, 200)
         return jsonify({"message": f"'{source_path}' movido exitosamente a '{destination_path}'"}), 200
@@ -352,18 +356,22 @@ def delete_file_or_folder():
         return jsonify({"error": "No se proporcionó la ruta del archivo o carpeta a eliminar"}), 400
 
     try:
-        user_directory = get_user_directory(user)
+        user_directory = get_user_directory(get_user_identifier(user.id))
         full_target_path = secure_path(user_directory, target_path)
 
+        print("full_target_path: ", full_target_path)
+        
         if not os.path.exists(full_target_path):
             return jsonify({"error": "El archivo o carpeta no existe"}), 404
 
         if os.path.isfile(full_target_path):
             # Eliminar archivo
+            print("Eliminando archivo")
             os.remove(full_target_path)
         else:
             # Eliminar carpeta
-            os.rmdir(full_target_path)
+            print("Eliminando carpeta")
+            shutil.rmtree(full_target_path)
 
         log_api_request(get_jwt_identity(), "Eliminación exitosa", "delete", target_path, 200)
         return jsonify({"message": f"'{target_path}' eliminado exitosamente"}), 200
@@ -371,7 +379,6 @@ def delete_file_or_folder():
     except ValueError as ve:
         return jsonify({"error": str(ve)}), 403
     except Exception as e:
-        log_api_request(get_jwt_identity(), "Error al eliminar archivo/carpeta", "delete", target_path, 500, error_message=str(e))
         return jsonify({"error": "Error interno del servidor"}), 500
 
 
@@ -410,28 +417,17 @@ def list_files_and_folders_single():
     if not user:
         return jsonify({"error": "Usuario no autenticado"}), 401
     
-    # Recibimos la ruta proporcionada desde el front (por ejemplo, ?dir_path=subcarpeta)
     data = request.get_json()
-    relative_path = request.args.get('dirPath', '')  # Si no se proporciona, usa la raíz
-    print("data: ", data)
-    print("relative_path obtenido: ", request.args.get('dirPath', '')) 
-    print("relative_path: ", relative_path)
-    
-    relative_path = data.get('dirPath', '')  # Si no se proporciona, usa la raíz
+    relative_path = data.get('dirPath', '')  # Obtener la ruta desde el cuerpo de la solicitud
     user_identifier = get_user_identifier(user.id)
-    specific_user_directory = str(user_identifier)+"/"+relative_path
-    # Directorio del usuario
+    specific_user_directory = str(user_identifier) + "/" + relative_path
     user_directory = Path(store_path) / specific_user_directory
-    print("user_directory: ", user_directory)
-    # Verificar si el directorio existe
+
     if not user_directory.exists():
         return jsonify({"error": "Directorio del usuario no encontrado"}), 404
 
     try:
-        # Obtener la estructura de archivos y carpetas
         directory_structure = get_specific_directory_structure(user_directory)
-        #print(directory_structure)
         return jsonify({"message": "Estructura obtenida correctamente", "structure": directory_structure}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-    
