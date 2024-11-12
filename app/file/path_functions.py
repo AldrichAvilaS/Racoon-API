@@ -125,7 +125,7 @@ def create_user_directory(user):
 def secure_path(user_directory, relative_path):
     # Convertir user_directory y relative_path a cadenas
     user_directory = str(user_directory)
-    print(f"User Directory: {user_directory}")
+    # print(f"User Directory: {user_directory}")
     relative_path = os.path.normpath(relative_path)
 
     # Si el relative_path es '.' (directorio actual), no se necesita ningún ajuste
@@ -136,10 +136,10 @@ def secure_path(user_directory, relative_path):
         print("no esta en la raiz")
         full_path = os.path.normpath(os.path.join(user_directory + relative_path))
 
-    # Normalizar las rutas para asegurar consistencia en las barras invertidas
-    print(f"Relative Path: {relative_path}")
-    print(f"Full Path: {full_path}")
-    print(f"User Directory: {user_directory}")
+    # # Normalizar las rutas para asegurar consistencia en las barras invertidas
+    # print(f"Relative Path: {relative_path}")
+    # print(f"Full Path: {full_path}")
+    # print(f"User Directory: {user_directory}")
 
     # Verificar que la ruta esté dentro del directorio del usuario
     common_path = os.path.commonpath([full_path, user_directory])
@@ -150,11 +150,11 @@ def secure_path(user_directory, relative_path):
     full_path_abs = os.path.abspath(full_path)
     
     # Comparamos las rutas absolutas
-    print(f"User Directory (Absoluta): {user_directory_abs}")
-    print(f"Full Path (Absoluto): {full_path_abs}")
+    # print(f"User Directory (Absoluta): {user_directory_abs}")
+    # print(f"Full Path (Absoluto): {full_path_abs}")
 
     if not full_path_abs.startswith(user_directory_abs):
-        print("Acceso no autorizado: la ruta no está dentro del directorio asignado")
+        # print("Acceso no autorizado: la ruta no está dentro del directorio asignado")
         raise ValueError("Intento de acceso no autorizado fuera del directorio asignado")
 
     return full_path
@@ -175,7 +175,7 @@ def get_role_id_by_name(role_name):
 def get_current_user():
     identifier = get_jwt_identity()
     user = None
-    print(identifier)
+    # print(identifier)
     # Buscar al usuario según el identificador
     student = Student.query.filter_by(boleta=identifier).first()
     if student:

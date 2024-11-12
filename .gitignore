@@ -4,3 +4,4 @@
 /app/__pycache__
 *.pyc
 app/path.py
+app/db/path.py
