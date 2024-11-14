@@ -21,6 +21,8 @@ from .file.file import file_bp
 from .logs.events import logs_bp
 from .notices.notice import notice_bp
 
+from .openstack.file_mannage import openstack_auth_bp
+
 def create_app():
     app = Flask(__name__)
     CORS(app, supports_credentials=True)  # Permite el uso de credenciales
@@ -60,4 +62,5 @@ def create_app():
 
     app.register_blueprint(notice_bp, url_prefix='/notices')
     
+    app.register_blueprint(openstack_auth_bp, url_prefix='/openstack')
     return app
