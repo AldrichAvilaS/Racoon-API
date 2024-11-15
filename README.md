@@ -9,9 +9,8 @@ pip install
     flask-restful,
     Flask-Security,
     Flask-SQLAlchemy,
-    lask-cors,
+    flask-cors,
     logging,
     marshmallow-sqlalchemy,
-    PyMySQL,
-    flask_jwt_extended,
+    flask_jwt_extended
 

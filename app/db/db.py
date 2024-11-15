@@ -23,7 +23,7 @@ class User(db.Model):
     confirmed_at = db.Column(db.DateTime)
     storage_limit = db.Column(db.Integer)
     delete_date = db.Column(db.DateTime)
-
+    openstack_id = db.Column(db.String(255),nullable=False)
     # Llave foránea para el rol
     role_id = db.Column(db.Integer, db.ForeignKey('role.role_id'), nullable=False)
     role = db.relationship('Role', backref='users')
@@ -157,7 +157,8 @@ def insert_default_data():
             username='admin',
             email='admin@example.com',
             password=generate_password_hash('root'),
-            role_id=Role.query.filter_by(name='Administrador').first().role_id
+            role_id=Role.query.filter_by(name='Administrador').first().role_id,
+            openstack_id='00000000000000000000000000000000'
         )
         db.session.add(admin_user)
         db.session.commit()

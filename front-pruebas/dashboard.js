@@ -188,7 +188,7 @@ document.getElementById('submitCreateUser').addEventListener('click', async func
         nombre,
         role_id: roleId
     };
-
+    alert(JSON.stringify(dataToSend));
     try {
         const response = await fetch('http://127.0.0.1:5000/users/', {
             method: 'POST',

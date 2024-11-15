@@ -5,7 +5,7 @@ from sqlalchemy.exc import IntegrityError
 from ..db.db import Role, db, User, Student, Teacher, Academy
 from ..logs.logs import log_api_request
 from ..authorization.decorators import role_required
-
+from ..openstack.user_openstack import create_user 
 users_bp = Blueprint('users', __name__)
 
 # Función auxiliar para obtener el usuario actual basado en el identificador
@@ -54,7 +54,7 @@ def get_role_name_by_value(role_value):
 @jwt_required()
 #@role_required(0, 1, 2)  # Solo Administrador (0) o Academia (1)
 def add_user():
-
+    print("se creara un usuario")
     data = request.get_json()
 
     # Validar datos requeridos
@@ -76,40 +76,54 @@ def add_user():
         log_api_request(get_jwt_identity(), 'POST - Agregar Usuario - Rol inexistente', "users", "none", 400)
         return jsonify({"error": f"El rol con ID {role_id} no existe."}), 400
 
-    hashed_password = generate_password_hash(data['password'])
+    password = data.get('password')
+    if isinstance(password, int):
+        password = str(password)
+    hashed_password = generate_password_hash(password)
     new_user = User(
         username=data['username'],
         email=data['email'],
         password=hashed_password,
         active=False,
         role_id=role_id,
-        storage_limit = 2  # Por defecto, 2 GB de almacenamiento 
+        storage_limit = 2,  # Por defecto, 2 GB de almacenamiento
+        openstack_id = '0'
     )
 
     try:
+        print("se intentara en el try creara un usuario")
         db.session.add(new_user)
         db.session.commit()
 
         # Si el usuario es un estudiante o profesor, crear los registros correspondientes
+        print("rol id post try",role_id)
+        print("rol id post try Estudiante",get_role_id_by_name('Estudiante'))
+        print("rol id post try Profesor",get_role_id_by_name('Profesor'))
         if role_id == get_role_id_by_name('Estudiante'):  # Estudiante
             if 'boleta' not in data:
                 log_api_request(get_jwt_identity(), 'POST - Agregar Usuario - Boleta requerida para estudiantes', "users", "none", 400)
                 return jsonify({"error": "El campo 'boleta' es obligatorio para estudiantes."}), 400
+            print("se creara un estudiante")
             new_student = Student(
                 user_id=new_user.id,
                 boleta=data['boleta'],
                 current_semester=1
             )
+            openstack_id = create_user(data['boleta'])
+            new_user.openstack_id = openstack_id
             db.session.add(new_student)
             db.session.commit()
         elif role_id == get_role_id_by_name('Profesor'):  # Profesor
             if 'rfc' not in data:
                 log_api_request(get_jwt_identity(), 'POST - Agregar Usuario - RFC requerido para profesores', "users", "none", 400)
                 return jsonify({"error": "El campo 'rfc' es obligatorio para profesores."}), 400
+            print("se creara un profesor")
             new_teacher = Teacher(
                 user_id=new_user.id,
                 rfc=data['rfc']
             )
+            openstack_id = create_user(data['rfc'])
+            new_user.openstack_id = openstack_id
             db.session.add(new_teacher)
             db.session.commit()
 
@@ -241,7 +255,7 @@ def update_user(identifier):
         user.student.boleta = data['boleta']
     if user.role_id == 2 and 'rfc' in data and data['rfc']:
         user.teacher.rfc = data['rfc']
-
+    user.active = True
     db.session.commit()
     log_api_request(get_jwt_identity(), 'PUT - Usuario actualizado con éxito', "users", identifier, 200)
     return jsonify({"message": "Usuario actualizado con éxito"}), 200
