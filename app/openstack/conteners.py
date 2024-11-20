@@ -25,3 +25,4 @@ def create_project(user_id):
     except requests.exceptions.RequestException as err:
         print("Error en la petición:", err)
     return response.json()
+

@@ -22,6 +22,7 @@ from .logs.events import logs_bp
 from .notices.notice import notice_bp
 
 from .openstack.file_mannage import openstack_auth_bp
+from .openstack.upload import upload_bp
 
 def create_app():
     app = Flask(__name__)
@@ -63,4 +64,5 @@ def create_app():
     app.register_blueprint(notice_bp, url_prefix='/notices')
     
     app.register_blueprint(openstack_auth_bp, url_prefix='/openstack')
+    app.register_blueprint(upload_bp, url_prefix='/upload')
     return app

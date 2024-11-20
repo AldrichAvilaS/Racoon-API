@@ -1,13 +1,15 @@
 #logica que recibe un archivo desde un endpoint para despues mandar el archivo por una request a los contenedores de openstack
-from flask import Blueprint
+from flask import Blueprint, request
 from flask_jwt_extended import jwt_required
 import requests, json
 
 openstack_auth_bp = Blueprint('openstack', __name__)
 
-@openstack_auth_bp.route('/', methods=['POST'])
-def openstack_auth_token():
-    user_identifier = '2019300397'
+# @openstack_auth_bp.route('/', methods=['POST'])
+def openstack_auth_token(user_identifier):
+    # data = request.get_json()
+    # user_identifier = data.get['user_identifier']
+    print("get token", user_identifier)
     # Define los datos de autenticación
     auth_url = "http://192.168.1.104:5000/v3/auth/tokens"
     data = { 
@@ -23,8 +25,8 @@ def openstack_auth_token():
                             {
                                 "name": "Default"
                             },
-                            "name": "2019300397",
-                            "password": "2019300397"
+                            "name": user_identifier,
+                            "password": user_identifier
                         } 
                     } 
                 }, 
@@ -36,7 +38,7 @@ def openstack_auth_token():
                         { 
                             "name": "Default" 
                         }, 
-                        "name":  "2019300397" 
+                        "name":  user_identifier
                     } 
                 } 
             }

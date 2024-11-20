@@ -6,6 +6,7 @@ import requests, json
 def openstack_auth_id(user_identifier):
     # Define los datos de autenticación
     user_identifier=str(user_identifier)
+    print(user_identifier)
     auth_url = "http://192.168.1.104:5000/v3/auth/tokens"
     data = { 
             "auth": { 
@@ -20,8 +21,8 @@ def openstack_auth_id(user_identifier):
                             {
                                 "name": "Default"
                             },
-                            "name": "{user_identifier}",
-                            "password": "{user_identifier}"
+                            "name": user_identifier,
+                            "password": user_identifier
                         } 
                     } 
                 }, 
@@ -33,7 +34,7 @@ def openstack_auth_id(user_identifier):
                         { 
                             "name": "Default" 
                         }, 
-                        "name":  "{user_identifier}" 
+                        "name": user_identifier
                     } 
                 } 
             }
@@ -47,13 +48,12 @@ def openstack_auth_id(user_identifier):
     if response.status_code == 201:
         token = response.headers["X-Subject-Token"]
         print("Token de autenticación obtenido:", token)
-        id = get_id_scope(token, user_identifier)
-        print("ID de usuario obtenido:", id)
-        return {"token": token, "id": id}, 201
+        return {"token": token}, 201
     else:
         print("Error en la autenticación:", response.status_code, response.text)
         return {"error": response.text}, response.status_code
-    
+
+#funcion que obtiene el id de un usuario en openstack
 def get_id_scope(token, nombre):
     auth_url = "http://192.168.1.104:5000/v3/users/"
     headers = {"X-Auth-Token": token}  # Corregido para usar el valor de la variable `token`
