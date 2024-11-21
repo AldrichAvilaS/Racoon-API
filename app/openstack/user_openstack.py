@@ -6,7 +6,7 @@ import requests, json
 def openstack_auth_id(user_identifier):
     # Define los datos de autenticación
     user_identifier=str(user_identifier)
-    print(user_identifier)
+    # print(user_identifier)
     auth_url = "http://192.168.1.104:5000/v3/auth/tokens"
     data = { 
             "auth": { 
@@ -47,11 +47,11 @@ def openstack_auth_id(user_identifier):
     # Comprueba si la solicitud fue exitosa
     if response.status_code == 201:
         token = response.headers["X-Subject-Token"]
-        print("Token de autenticación obtenido:", token)
-        return {"token": token}, 201
+        # print("Token de autenticación obtenido:", token)
+        return token
     else:
-        print("Error en la autenticación:", response.status_code, response.text)
-        return {"error": response.text}, response.status_code
+        # print("Error en la autenticación:", response.status_code, response.text)
+        return response.status_code
 
 #funcion que obtiene el id de un usuario en openstack
 def get_id_scope(token, nombre):
@@ -92,9 +92,12 @@ def get_id_scope(token, nombre):
     return None
 
 #peticion a la api de openstack para crear un usuario
-def create_user(user_id):
+def create_user(user_id, role):
     print("Creando usuario en OpenStack")
-    fetch_url = "http://localhost:10000/user/"
+    if role == "student":
+        fetch_url = "http://localhost:10000/user/student"
+    else:
+        fetch_url = "http://localhost:10000/user/teacher"
     data = {"student_id": user_id}
     try:
         response = requests.post(fetch_url, json=data)

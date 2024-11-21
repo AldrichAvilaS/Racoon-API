@@ -14,6 +14,7 @@ from ..db.db import User
 from ..db.path import store_path, zip_path
 from ..logs.logs import log_api_request
 from .path_functions import *
+from ..openstack.upload import upload_file_openstack
 
 file_bp = Blueprint('file', __name__)
 
@@ -60,11 +61,14 @@ def upload_file():
         os.makedirs(save_directory, exist_ok=True)  # Crear el directorio si no existe
         
         save_path = os.path.join(save_directory, file_name)
-        
+        print("save_path: ", save_path)
+        print("file_path: ", file_path)
         # Guardar el archivo
         with open(save_path, 'wb') as file:
             file.write(file_bytes)
-            
+        
+        upload_file_openstack(get_user_identifier(user.id), user.openstack_id, file_path , save_path, file_name)
+
         log_api_request(get_jwt_identity(), "Subida de archivo exitosa", file_path, file_name, 200)
         return jsonify({"message": "Archivo cargado correctamente"}), 200
     except base64.binascii.Error:
@@ -117,6 +121,7 @@ def upload_multiple_files():
             # Guardar el archivo
             with open(save_path, 'wb') as file:
                 file.write(file_bytes)
+            upload_file_openstack(get_user_identifier(user.id), user.openstack_id, save_path, file_name)
             # Log exitoso para cada archivo subido
             log_api_request(get_jwt_identity(), "Subida de archivos multiples exitosa", file_path, file_name, 200)
             

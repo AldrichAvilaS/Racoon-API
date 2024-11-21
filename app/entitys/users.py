@@ -96,9 +96,6 @@ def add_user():
         db.session.commit()
 
         # Si el usuario es un estudiante o profesor, crear los registros correspondientes
-        print("rol id post try",role_id)
-        print("rol id post try Estudiante",get_role_id_by_name('Estudiante'))
-        print("rol id post try Profesor",get_role_id_by_name('Profesor'))
         if role_id == get_role_id_by_name('Estudiante'):  # Estudiante
             if 'boleta' not in data:
                 log_api_request(get_jwt_identity(), 'POST - Agregar Usuario - Boleta requerida para estudiantes', "users", "none", 400)
@@ -109,7 +106,7 @@ def add_user():
                 boleta=data['boleta'],
                 current_semester=1
             )
-            openstack_id = create_user(data['boleta'])
+            openstack_id = create_user(data['boleta'], 'student')
             new_user.openstack_id = openstack_id
             db.session.add(new_student)
             db.session.commit()
@@ -122,7 +119,7 @@ def add_user():
                 user_id=new_user.id,
                 rfc=data['rfc']
             )
-            openstack_id = create_user(data['rfc'])
+            openstack_id = create_user(data['rfc'], 'teacher')
             new_user.openstack_id = openstack_id
             db.session.add(new_teacher)
             db.session.commit()

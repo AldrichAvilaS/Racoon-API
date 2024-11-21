@@ -51,16 +51,14 @@ def openstack_auth_token(user_identifier):
     # Comprueba si la solicitud fue exitosa
     if response.status_code == 201:
         token = response.headers["X-Subject-Token"]
-        print("Token de autenticación obtenido:", token)
+        # print("Token de autenticación obtenido:", token)
         id = get_id_scope(token, user_identifier)
-        print("ID de usuario obtenido:", id)
+        # print("ID de usuario obtenido:", id)
         return {"token": token, "id": id}, 201
     else:
-        print("Error en la autenticación:", response.status_code, response.text)
+        # print("Error en la autenticación:", response.status_code, response.text)
         return {"error": response.text}, response.status_code
     
-import requests
-
 def get_id_scope(token, nombre):
     auth_url = "http://192.168.1.104:5000/v3/users/"
     headers = {"X-Auth-Token": token}  # Corregido para usar el valor de la variable `token`
