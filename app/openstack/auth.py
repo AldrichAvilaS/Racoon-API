@@ -1,16 +1,11 @@
-#logica que recibe un archivo desde un endpoint para despues mandar el archivo por una request a los contenedores de openstack
-from flask import Blueprint, request
-from flask_jwt_extended import jwt_required
-import requests, json
+#regresa el token de autenticacion de openstack para las siguientes peticiones
+import json
+import requests
 
-openstack_auth_bp = Blueprint('openstack', __name__)
-
-# @openstack_auth_bp.route('/', methods=['POST'])
-def openstack_auth_token(user_identifier):
-    # data = request.get_json()
-    # user_identifier = data.get['user_identifier']
-    print("get token", user_identifier)
+def openstack_auth_id(user_identifier):
     # Define los datos de autenticación
+    user_identifier=str(user_identifier)
+    # print(user_identifier)
     auth_url = "http://192.168.1.104:5000/v3/auth/tokens"
     data = { 
             "auth": { 
@@ -38,7 +33,7 @@ def openstack_auth_token(user_identifier):
                         { 
                             "name": "Default" 
                         }, 
-                        "name":  user_identifier
+                        "name": user_identifier
                     } 
                 } 
             }
@@ -52,13 +47,12 @@ def openstack_auth_token(user_identifier):
     if response.status_code == 201:
         token = response.headers["X-Subject-Token"]
         # print("Token de autenticación obtenido:", token)
-        id = get_id_scope(token, user_identifier)
-        # print("ID de usuario obtenido:", id)
-        return {"token": token, "id": id}, 201
+        return token
     else:
         # print("Error en la autenticación:", response.status_code, response.text)
-        return {"error": response.text}, response.status_code
-    
+        return response.status_code
+
+#funcion que obtiene el id de un usuario en openstack
 def get_id_scope(token, nombre):
     auth_url = "http://192.168.1.104:5000/v3/users/"
     headers = {"X-Auth-Token": token}  # Corregido para usar el valor de la variable `token`
