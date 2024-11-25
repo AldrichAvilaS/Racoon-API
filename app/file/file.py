@@ -1,10 +1,8 @@
 # lógica de manejo de archivos
-# Versión 0.4 - Proporcionar directorios y rutas
-from io import BytesIO
-import os, base64, hashlib
+# Versión 0.4 - Proporcionar directorios y rutas seguras
+import os, base64
 import shutil
 import threading
-import time
 import uuid
 import zipfile
 from flask import Blueprint, after_this_request, request, jsonify, send_file, abort
@@ -14,7 +12,9 @@ from ..db.db import User
 from ..db.path import store_path, zip_path
 from ..logs.logs import log_api_request
 from .path_functions import *
-from ..openstack.load import upload_file_openstack
+from ..openstack.load import upload_file_openstack, download_file
+from ..openstack.object import get_object_list, delete
+from ..openstack.conteners import create_path
 
 file_bp = Blueprint('file', __name__)
 
@@ -37,7 +37,7 @@ def upload_file():
     file_data = data['file']  # Archivo codificado en base64
     file_name = data['filename']  # Nombre del archivo
     file_path = data.get('path', '')  # Opcionalmente, se recibe una ruta para guardar el archivo
-    
+    file_project = data.get('project_id', '') 
     try:
         # Decodificar el archivo base64
         file_bytes = base64.b64decode(file_data)
@@ -67,7 +67,7 @@ def upload_file():
         with open(save_path, 'wb') as file:
             file.write(file_bytes)
         
-        upload_file_openstack(get_user_identifier(user.id), user.openstack_id, file_path , save_path, file_name)
+        upload_file_openstack(get_user_identifier(user.id), user.openstack_id, file_project, file_path , save_path, file_name)
 
         log_api_request(get_jwt_identity(), "Subida de archivo exitosa", file_path, file_name, 200)
         return jsonify({"message": "Archivo cargado correctamente"}), 200
@@ -77,60 +77,6 @@ def upload_file():
         return jsonify({"error": f"Error de sistema: {str(e)}"}), 500
     except Exception as e:
         log_api_request(get_jwt_identity(), "Error en la subida de archivo", file_path, file_name, 500, error_message=str(e))
-        return jsonify({"error": str(e)}), 500
-
-# Ruta para recibir múltiples archivos
-@file_bp.route('/upload/lot', methods=['POST'])
-@jwt_required()  # Proteger con JWT
-def upload_multiple_files():
-    
-    user = get_current_user()
-    
-    if not user:
-        return jsonify({"error": "Usuario no autenticado"}), 401
-    data = request.get_json()  # Recibe JSON
-    
-    # Validar que se hayan recibido archivos
-    if 'files' not in data:
-        return jsonify({"error": "No se encontraron archivos"}), 400
-    
-    files = data['files']  # Lista de archivos, cada uno con 'file' y 'filename'
-    file_path = data.get('path', '')  # Opcionalmente, se recibe una ruta para guardar los archivos
-    
-    try:
-        for file_info in files:
-            if not file_info.get('file') or not file_info.get('filename'):
-                return jsonify({"error": "Falta archivo o nombre en uno de los archivos"}), 400
-
-            file_data = file_info['file']  # Archivo codificado en base64
-            file_name = file_info['filename']  # Nombre del archivo
-            
-            # Decodificar el archivo base64
-            file_bytes = base64.b64decode(file_data)
-
-            # Validar tamaño de archivo
-            if len(file_bytes) > MAX_FILE_SIZE:
-                return jsonify({"error": f"El archivo {file_name} es demasiado grande"}), 400
-            
-            # Generar la ruta completa donde se guardará cada archivo
-            save_directory = get_save_directory(user, file_path)
-            os.makedirs(save_directory, exist_ok=True)  # Crear el directorio si no existe
-            
-            save_path = os.path.join(save_directory, file_name)
-            
-            # Guardar el archivo
-            with open(save_path, 'wb') as file:
-                file.write(file_bytes)
-            upload_file_openstack(get_user_identifier(user.id), user.openstack_id, save_path, file_name)
-            # Log exitoso para cada archivo subido
-            log_api_request(get_jwt_identity(), "Subida de archivos multiples exitosa", file_path, file_name, 200)
-            
-        return jsonify({"message": "Archivos cargados correctamente"}), 200
-    except base64.binascii.Error:
-        return jsonify({"error": "Error al decodificar alguno de los archivos base64"}), 400
-    except OSError as e:
-        return jsonify({"error": f"Error de sistema: {str(e)}"}), 500
-    except Exception as e:
         return jsonify({"error": str(e)}), 500
 
 # Ruta para recibir archivos en partes (chunks)
@@ -146,7 +92,7 @@ def upload_file_chunk():
     total_chunks = request.headers.get('X-Total-Chunks')
     file_name = request.headers.get('X-File-Name')
     file_path = request.headers.get('X-File-Path', '')  # Opcional, ruta proporcionada por el usuario
-
+    file_project = request.headers.get('X-Project', get_user_identifier(user.id))  # Opcional, ruta proporcionada por el usuario
     if not chunk_index or not total_chunks or not file_name:
         return jsonify({"error": "Faltan cabeceras"}), 400
 
@@ -173,6 +119,9 @@ def upload_file_chunk():
             final_file_path = get_unique_file_path(save_directory, file_name)
             
             os.rename(temp_file_path, final_file_path)
+            
+            upload_file_openstack(get_user_identifier(user.id), user.openstack_id, file_project, file_path , save_directory, file_name)
+
             log_api_request(get_jwt_identity(), "Subida de archivo exitosa", file_path, file_name, 200)
             return jsonify({"message": "Archivo completo", "file_name": os.path.basename(final_file_path)}), 200
 
@@ -201,6 +150,10 @@ def download_file():
         print("user_directory: ", user_directory)
         full_file_path = secure_path(user_directory, file_path)
         print("full_file_path: ", full_file_path)
+        
+        #mandar a descargar el archivo desde openstack
+        download_file(get_user_identifier(user.id), user.openstack_id, file_path, file_path, full_file_path)
+        
         if not os.path.exists(full_file_path):
             return jsonify({"error": "El archivo no existe"}), 404
 
@@ -211,6 +164,85 @@ def download_file():
         return jsonify({"error": str(ve)}), 403
     except Exception as e:
         return jsonify({"error": "Error interno del servidor"}), 500
+
+# Ruta para eliminar un archivo o carpeta
+@file_bp.route('/delete', methods=['POST'])
+@jwt_required()
+def delete_file_or_folder():
+    user = get_current_user()
+    if not user:
+        return jsonify({"error": "Usuario no autenticado"}), 401
+    user_identifier = get_user_identifier(user.id)
+    data = request.get_json()
+    target_path = data.get('target_path')
+    if data.get('project_id') is not None: 
+        project_id = data.get('project_id') 
+    else: 
+        project_id = user_identifier
+    
+
+    if not target_path:
+        return jsonify({"error": "No se proporcionó la ruta del archivo o carpeta a eliminar"}), 400
+
+    try:
+        
+        delete(user_identifier, user.openstack_id, target_path, target_path)
+
+        log_api_request(get_jwt_identity(), "Eliminación exitosa", "delete", target_path, 200)
+        return jsonify({"message": f"'{target_path}' eliminado exitosamente"}), 200
+
+    except ValueError as ve:
+        return jsonify({"error": str(ve)}), 403
+    except Exception as e:
+        return jsonify({"error": "Error interno del servidor"}), 500
+
+# Ruta para listar las carpetas y archivos del espacio individual del usuario
+@file_bp.route('/full-list', methods=['GET'])
+@jwt_required()  # Protegido con JWT
+def list_files_and_folders():
+    user = get_current_user()
+    if not user:
+        return jsonify({"error": "Usuario no autenticado"}), 401
+
+    user_identifier = get_user_identifier(user.id)
+
+    if not user.exists():
+        return jsonify({"error": "Usuario no encontrado"}), 404
+
+    try:
+        # Obtener la estructura de archivos y carpetas
+        object_list = get_object_list(user_identifier, user_identifier)
+        print(object_list)
+        object_list = object_list['data']
+        return jsonify({"message": "Estructura obtenida correctamente", "structure": object_list}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+# Ruta para listar las carpetas y archivos que contiene un alumno en un grupo
+@file_bp.route('/list-student', methods=['POST'])
+@jwt_required()  # Protegido con JWT
+def list_files_and_folders_single():
+    data = request.get_json()
+    
+    user = data.get('user')
+    group = data.get('group')
+    
+    user_identifier = get_user_identifier(user.id)
+
+    print("user_directory: ")
+    
+    if not user.exists():
+        return jsonify({"error": "Directorio del usuario no encontrado"}), 404
+
+    try:
+        object_list = get_object_list(user_identifier, group)
+        print(object_list)
+        object_list = object_list['data']
+        return jsonify({"message": "Estructura obtenida correctamente", "structure": object_list}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+#--------------------------------------------------------------************--------------------------------------------------------------#
 
 # Ruta para descargar una carpeta como ZIP
 @file_bp.route('/download-folder', methods=['GET'])
@@ -351,95 +383,4 @@ def move_file_or_folder():
     except Exception as e:
         log_api_request(get_jwt_identity(), "Error al mover archivo/carpeta", "move", source_path, 500, error_message=str(e))
         return jsonify({"error": "Error interno del servidor"}), 500
-    
-# Ruta para eliminar un archivo o carpeta
-@file_bp.route('/delete', methods=['POST'])
-@jwt_required()
-def delete_file_or_folder():
-    user = get_current_user()
-    if not user:
-        return jsonify({"error": "Usuario no autenticado"}), 401
-
-    data = request.get_json()
-    target_path = data.get('target_path')
-
-    if not target_path:
-        return jsonify({"error": "No se proporcionó la ruta del archivo o carpeta a eliminar"}), 400
-
-    try:
-        user_directory = get_user_directory(get_user_identifier(user.id))
-        full_target_path = secure_path(user_directory, target_path)
-
-        print("full_target_path: ", full_target_path)
-        
-        if not os.path.exists(full_target_path):
-            return jsonify({"error": "El archivo o carpeta no existe"}), 404
-
-        if os.path.isfile(full_target_path):
-            # Eliminar archivo
-            print("Eliminando archivo")
-            os.remove(full_target_path)
-        else:
-            # Eliminar carpeta
-            print("Eliminando carpeta")
-            shutil.rmtree(full_target_path)
-
-        log_api_request(get_jwt_identity(), "Eliminación exitosa", "delete", target_path, 200)
-        return jsonify({"message": f"'{target_path}' eliminado exitosamente"}), 200
-
-    except ValueError as ve:
-        return jsonify({"error": str(ve)}), 403
-    except Exception as e:
-        return jsonify({"error": "Error interno del servidor"}), 500
-
-
-# Ruta para listar las carpetas y archivos dentro de store_path
-@file_bp.route('/full-list', methods=['GET'])
-@jwt_required()  # Protegido con JWT
-def list_files_and_folders():
-    user = get_current_user()
-    if not user:
-        return jsonify({"error": "Usuario no autenticado"}), 401
-
-    user_identifier = get_user_identifier(user.id)
-    # Directorio del usuario
-    user_directory = Path(store_path) / str(user_identifier)
-    print("user_directory: ", user_directory)
-    
-    user_directory = get_user_directory(user_identifier)
-    print("user_directory por get_user_directory: ", user_directory)
-    # Verificar si el directorio existe
-    if not user_directory.exists():
-        return jsonify({"error": "Directorio del usuario no encontrado"}), 404
-
-    try:
-        # Obtener la estructura de archivos y carpetas
-        directory_structure = get_directory_structure(user_directory)
-        #print(directory_structure)
-        return jsonify({"message": "Estructura obtenida correctamente", "structure": directory_structure}), 200
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-# Ruta para listar las carpetas y archivos dentro de una ruta especifica
-@file_bp.route('/list', methods=['POST'])
-@jwt_required()  # Protegido con JWT
-def list_files_and_folders_single():
-    user = get_current_user()
-    if not user:
-        return jsonify({"error": "Usuario no autenticado"}), 401
-    
-    data = request.get_json()
-    relative_path = data.get('dirPath', '')  # Obtener la ruta desde el cuerpo de la solicitud
-    user_identifier = get_user_identifier(user.id)
-    specific_user_directory = str(user_identifier) + "/" + relative_path
-    user_directory = Path(store_path) / specific_user_directory
-    print("user_directory: ", user_directory)
-    if not user_directory.exists():
-        return jsonify({"error": "Directorio del usuario no encontrado"}), 404
-
-    try:
-        directory_structure = get_specific_directory_structure(user_directory)
-        print(directory_structure)
-        return jsonify({"message": "Estructura obtenida correctamente", "structure": directory_structure}), 200
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+   

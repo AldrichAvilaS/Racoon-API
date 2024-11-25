@@ -10,7 +10,7 @@ notice_bp = Blueprint('notice', __name__)
 # Endpoint para crear una nueva noticia
 @notice_bp.route('/create-notice', methods=['POST'])
 @jwt_required()  # Requiere autenticación con JWT
-@role_required(0, 1)  # Administrador (0) y Academia (1)
+# @role_required(0, 1)  # Administrador (0) y Academia (1)
 def create_notice():
     user = get_current_user()
 

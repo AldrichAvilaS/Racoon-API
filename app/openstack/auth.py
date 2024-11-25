@@ -2,7 +2,7 @@
 import json
 import requests
 
-def openstack_auth_id(user_identifier):
+def openstack_auth_id(user_identifier, project):
     # Define los datos de autenticación
     user_identifier=str(user_identifier)
     # print(user_identifier)
@@ -33,7 +33,7 @@ def openstack_auth_id(user_identifier):
                         { 
                             "name": "Default" 
                         }, 
-                        "name": user_identifier
+                        "name": project
                     } 
                 } 
             }
