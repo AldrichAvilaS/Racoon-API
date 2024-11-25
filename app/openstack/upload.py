@@ -66,14 +66,14 @@ def download_file_endpoint():
 def upload_file_openstack(user, user_scope, file_path, full_path, file_name):
     
     token = openstack_auth_id(str(user))
-    print(token)
-    print("file_path_recibido", file_path)
-    print("file_name_recibido", file_name)
-    print("full_path_recibido", full_path)
+    # print(token)
+    # print("file_path_recibido", file_path)
+    # print("file_name_recibido", file_name)
+    # print("full_path_recibido", full_path)
     with open(full_path, 'rb') as f:
         data = f.read()
     file_name = file_path + '/' + file_name
-    print(file_name)
+    # print(file_name)
     # url = f"192.168.1.104:5000/v1/{user}/{object_name}"
     url = f"http://192.168.1.104:8080/v1/{user_scope}/{user}/{file_name}"
     print(url)
