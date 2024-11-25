@@ -14,7 +14,7 @@ from ..db.db import User
 from ..db.path import store_path, zip_path
 from ..logs.logs import log_api_request
 from .path_functions import *
-from ..openstack.upload import upload_file_openstack
+from ..openstack.load import upload_file_openstack
 
 file_bp = Blueprint('file', __name__)
 
@@ -433,12 +433,13 @@ def list_files_and_folders_single():
     user_identifier = get_user_identifier(user.id)
     specific_user_directory = str(user_identifier) + "/" + relative_path
     user_directory = Path(store_path) / specific_user_directory
-
+    print("user_directory: ", user_directory)
     if not user_directory.exists():
         return jsonify({"error": "Directorio del usuario no encontrado"}), 404
 
     try:
         directory_structure = get_specific_directory_structure(user_directory)
+        print(directory_structure)
         return jsonify({"message": "Estructura obtenida correctamente", "structure": directory_structure}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500

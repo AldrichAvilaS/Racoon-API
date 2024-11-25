@@ -4,7 +4,7 @@ from flask_cors import CORS
 from flask_jwt_extended import JWTManager
 from flask_migrate import Migrate
 from datetime import timedelta
-from .db.db import init_db, db, User
+from .db.db import init_db, db
 
 # Importa y registra los Blueprints
 from .authorization.auth import auth_bp
@@ -21,8 +21,8 @@ from .file.file import file_bp
 from .logs.events import logs_bp
 from .notices.notice import notice_bp
 
-from .openstack.file_mannage import openstack_auth_bp
-from .openstack.upload import upload_bp
+from .openstack.object import openstack_auth_bp
+from .openstack.load import upload_bp
 
 def create_app():
     app = Flask(__name__)

@@ -4,11 +4,11 @@ import hashlib
 import os
 from pathlib import Path
 import time
-
 from flask_jwt_extended import get_jwt_identity
-
 from ..db.path import store_path, zip_path
 from ..db.db import Role, db, User, Student, Teacher, Academy
+
+
 # Función para generar la ruta de guardado con limpieza de espacios en blanco
 def get_save_directory(user, file_path):
     # Limpiar espacios en blanco no deseados
@@ -82,7 +82,6 @@ def get_directory_structure(root_dir):
 def bytes_to_megabytes(size_in_bytes):
     return round(size_in_bytes / (1024), 2)  # 1 MB = 1024 * 1024 bytes
 
-
 # Función que obtiene la estructura de directorios y archivos de una carpeta específica
 def get_specific_directory_structure(dir_path):
     structure = {'folders': [], 'files': []}  # Inicializamos la estructura
@@ -120,7 +119,6 @@ def create_user_directory(user):
         os.makedirs(user_directory)
     return user_directory
 
-
 # Función para asegurar rutas y prevenir path traversal
 def secure_path(user_directory, relative_path):
     # Convertir user_directory y relative_path a cadenas
@@ -136,29 +134,18 @@ def secure_path(user_directory, relative_path):
         print("no esta en la raiz")
         full_path = os.path.normpath(os.path.join(user_directory + relative_path))
 
-    # # Normalizar las rutas para asegurar consistencia en las barras invertidas
-    # print(f"Relative Path: {relative_path}")
-    # print(f"Full Path: {full_path}")
-    # print(f"User Directory: {user_directory}")
-
     # Verificar que la ruta esté dentro del directorio del usuario
     common_path = os.path.commonpath([full_path, user_directory])
-    # print(f"Common Path: {common_path}")
 
     # Convertimos ambas rutas a rutas absolutas
     user_directory_abs = os.path.abspath(user_directory)
     full_path_abs = os.path.abspath(full_path)
-    
-    # Comparamos las rutas absolutas
-    # print(f"User Directory (Absoluta): {user_directory_abs}")
-    # print(f"Full Path (Absoluto): {full_path_abs}")
 
     if not full_path_abs.startswith(user_directory_abs):
         # print("Acceso no autorizado: la ruta no está dentro del directorio asignado")
         raise ValueError("Intento de acceso no autorizado fuera del directorio asignado")
 
     return full_path
-
 
 # Función para obtener el directorio base del usuario
 def get_user_directory(user_identifier):
@@ -222,3 +209,46 @@ def delayed_file_deletion(filepath, delay=180):
         print(f"Archivo {filepath} eliminado del servidor después de {delay} segundos.")
     except Exception as e:
         print(f"Error al eliminar el archivo {filepath}: {e}")
+
+def transform_to_structure(data):
+    structure = {}
+
+    for item in data:
+        name = item["Name"]
+        is_dir = name.endswith("/")
+        name = name.strip("/")  # Eliminar las barras iniciales y finales
+
+        parts = name.split("/")
+        current_path = "/".join(parts)
+        parent_path = "/".join(parts[:-1]) if len(parts) > 1 else ""
+
+        # Inicializar la estructura para el directorio padre si no existe
+        if parent_path not in structure:
+            structure[parent_path] = {"files": [], "folders": []}
+
+        if is_dir:
+            # Es una carpeta
+            # Añadir la carpeta al campo 'folders' del directorio padre
+            folder_name = current_path
+            if folder_name not in structure[parent_path]["folders"]:
+                structure[parent_path]["folders"].append(folder_name)
+
+            # Inicializar la estructura para la carpeta actual
+            if folder_name not in structure:
+                structure[folder_name] = {"files": [], "folders": []}
+        else:
+            # Es un archivo
+            file_info = {
+                "date": datetime.fromisoformat(item["Last Modified"]).strftime("%d/%m/%Y"),
+                "path": current_path,
+                "size": round(item["Bytes"] / 1024, 2) # Convertir bytes a kilobytes
+            }
+            structure[parent_path]["files"].append(file_info)
+
+    # Asegurarse de que todas las rutas existen en la estructura
+    for path in list(structure.keys()):
+        for folder in structure[path]["folders"]:
+            if folder not in structure:
+                structure[folder] = {"files": [], "folders": []}
+
+    return {"structure": structure}
