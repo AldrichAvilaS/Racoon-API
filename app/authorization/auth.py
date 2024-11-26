@@ -92,7 +92,7 @@ def login():
     elif user_type == 'academy':
         academy = Academy.query.filter_by(academy_id=int(identifier)).first()
         if academy:
-            user = academy.main_teacher.user
+            user = academy
             print("el usuario es academy ", user)
     elif user_type == 'admin':
         user = User.query.filter_by(username=identifier).first()
@@ -108,13 +108,23 @@ def login():
     # Generar el token JWT usando el identificador especializado
     access_token = create_access_token(identity=identifier, expires_delta=timedelta(days=2))
     print("identicador", identifier)
-    return jsonify({
-        "message": "Inicio de sesión exitoso",
-        "access_token": access_token,
-        "active": user.active,
-        "user_type": get_user_role_value(user),
-        "user_id": identifier  # Enviamos el identificador especializado
-    }), 200
+    if user_type != 'academy':
+        return jsonify({
+            "message": "Inicio de sesión exitoso",
+            "access_token": access_token,
+            "active": user.active,
+            "user_type": get_user_role_value(user),
+            "user_id": identifier  # Enviamos el identificador especializado
+        }), 200
+    else:
+        return jsonify({
+            "message": "Inicio de sesión exitoso",
+            "access_token": access_token,
+            "active": True,
+            "user_type": 1,
+            "user_id": identifier  # Enviamos el identificador especializado
+        }), 200
+
 
 # Endpoint para verificar si la sesión está activa
 @auth_bp.route('/verify-session', methods=['GET'])

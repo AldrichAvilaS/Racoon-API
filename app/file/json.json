@@ -1,0 +1,45 @@
+{'': {'files': [
+            {'date': '21/11/2024', 'path': 'ChromeSetup.exe', 'size': 8708.38
+            },
+            {'date': '21/11/2024', 'path': 'CreacionProyecto.py', 'size': 0.7
+            },
+            {'date': '20/11/2024', 'path': 'DICTAMEN 2_2024-B-44.pdf', 'size': 975.75
+            },
+            {'date': '21/11/2024', 'path': 'DeIsL1.isu', 'size': 20.03
+            },
+            {'date': '21/11/2024', 'path': 'Diagrama ER de DBMS (notación UML).jpeg', 'size': 208.07
+            },
+            {'date': '21/11/2024', 'path': 'KHAN.reg', 'size': 0.85
+            },
+            {'date': '21/11/2024', 'path': 'MMX4.exe', 'size': 936.0
+            },
+            {'date': '21/11/2024', 'path': 'capturas docker.odt', 'size': 1056.96
+            },
+            {'date': '21/11/2024', 'path': 'comprobante.jpg', 'size': 138.02
+            },
+            {'date': '21/11/2024', 'path': 'namecheap-order-156023173.pdf', 'size': 14.82
+            },
+            {'date': '20/11/2024', 'path': 'solicitud de modificacion de nombre.pdf', 'size': 177.43
+            },
+            {'date': '23/11/2024', 'path': 'user.py', 'size': 4.73
+            }
+        ], 'folders': ['raiz', 'pueba2', 'home'
+        ]
+    }, 'home': {'files': [], 'folders': []
+    }, 'home/ali': {'files': [
+            {'date': '25/11/2024', 'path': 'home/ali/netplan.yaml', 'size': 0.36
+            }
+        ], 'folders': []
+    }, 'home/open': {'files': [], 'folders': []
+    }, 'home/open/Escritorio': {'files': [
+            {'date': '15/11/2024', 'path': 'home/open/Escritorio/SAM_MAMAHUEVO', 'size': 0.03
+            },
+            {'date': '23/11/2024', 'path': 'home/open/Escritorio/token.txt', 'size': 0.08
+            }
+        ], 'folders': []
+    }, 'pueba2': {'files': [
+            {'date': '21/11/2024', 'path': 'pueba2/MMX4.exe', 'size': 936.0
+            }
+        ], 'folders': []
+    }
+}

@@ -2,6 +2,7 @@ from flask import Blueprint, request, jsonify
 from flask_jwt_extended import get_current_user, jwt_required, get_jwt_identity
 from sqlalchemy.exc import IntegrityError
 from ..db.db import Academy, Enrollment, Subject, db, Group, Semester, User, Student, Teacher
+from werkzeug.security import generate_password_hash
 from ..logs.logs import log_api_request  
 from ..authorization.decorators import role_required  
 
@@ -22,13 +23,13 @@ def create_academy():
     # Validar datos requeridos
     required_fields = ['name', 'main_teacher_rfc']
     if not data or not all(field in data for field in required_fields):
-        log_api_request(get_jwt_identity(), 'POST - Crear Academia - Datos incompletos', "academies", "none", 400)
+        # log_api_request(get_jwt_identity(), 'POST - Crear Academia - Datos incompletos', "academies", "none", 400)
         return jsonify({"error": "Datos incompletos"}), 400
 
     # Verificar que el profesor principal exista y sea un profesor
     main_teacher = Teacher.query.filter_by(rfc=data['main_teacher_rfc']).first()
     if not main_teacher:
-        log_api_request(get_jwt_identity(), 'POST - Crear Academia - Profesor principal no encontrado', "academies", "none", 404)
+        # log_api_request(get_jwt_identity(), 'POST - Crear Academia - Profesor principal no encontrado', "academies", "none", 404)
         return jsonify({"error": "Profesor principal no encontrado"}), 404
 
     # Crear la nueva academia
@@ -36,13 +37,13 @@ def create_academy():
         name=data['name'],
         description=data.get('description', ''),
         main_teacher_id=main_teacher.user_id,  # Asignar el user_id del profesor principal
-        password=data['password']
+        password=generate_password_hash(data['name'])
     )
 
     try:
         db.session.add(new_academy)
         db.session.commit()
-        log_api_request(get_jwt_identity(), 'POST - Academia creada con éxito', "academies", str(new_academy.academy_id), 201)
+        # log_api_request(get_jwt_identity(), 'POST - Academia creada con éxito', "academies", str(new_academy.academy_id), 201)
         return jsonify({"message": "Academia creada con éxito", "academy_id": new_academy.academy_id}), 201
     except IntegrityError as e:
         db.session.rollback()

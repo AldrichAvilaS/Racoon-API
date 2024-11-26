@@ -5,6 +5,7 @@ import requests
 def openstack_auth_id(user_identifier, project):
     # Define los datos de autenticación
     user_identifier=str(user_identifier)
+    project = str(project)
     # print(user_identifier)
     auth_url = "http://192.168.1.104:5000/v3/auth/tokens"
     data = { 

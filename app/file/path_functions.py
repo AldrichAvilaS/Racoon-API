@@ -214,41 +214,48 @@ def transform_to_structure(data):
     structure = {}
 
     for item in data:
-        name = item["Name"]
-        is_dir = name.endswith("/")
-        name = name.strip("/")  # Eliminar las barras iniciales y finales
+        # Validar que el item contiene las claves necesarias
+        if not all(key in item for key in ["Name", "Last Modified", "Bytes"]):
+            continue
 
+        # Normalizar el nombre del archivo/carpeta
+        name = item["Name"].strip("/")  # Eliminar las barras iniciales y finales
+        is_dir = item["Name"].endswith("/")  # Detectar si es un directorio basado en la barra final
         parts = name.split("/")
         current_path = "/".join(parts)
         parent_path = "/".join(parts[:-1]) if len(parts) > 1 else ""
 
-        # Inicializar la estructura para el directorio padre si no existe
-        if parent_path not in structure:
-            structure[parent_path] = {"files": [], "folders": []}
+        # Asegurar que los directorios padres existan en la estructura
+        for i in range(len(parts)):
+            folder_path = "/".join(parts[:i])
+            if folder_path not in structure:
+                structure[folder_path] = {"files": [], "folders": []}
+
+            # Agregar el directorio actual al directorio padre
+            if i > 0:  # Ignorar el nivel raíz
+                parent = "/".join(parts[:i-1])
+                if folder_path not in structure[parent]["folders"]:
+                    structure[parent]["folders"].append(folder_path)
 
         if is_dir:
-            # Es una carpeta
-            # Añadir la carpeta al campo 'folders' del directorio padre
-            folder_name = current_path
-            if folder_name not in structure[parent_path]["folders"]:
-                structure[parent_path]["folders"].append(folder_name)
-
-            # Inicializar la estructura para la carpeta actual
-            if folder_name not in structure:
-                structure[folder_name] = {"files": [], "folders": []}
+            # Es un directorio (ya manejado en el bucle anterior)
+            continue
         else:
             # Es un archivo
-            file_info = {
-                "date": datetime.fromisoformat(item["Last Modified"]).strftime("%d/%m/%Y"),
-                "path": current_path,
-                "size": round(item["Bytes"] / 1024, 2) # Convertir bytes a kilobytes
-            }
-            structure[parent_path]["files"].append(file_info)
+            try:
+                file_info = {
+                    "date": datetime.fromisoformat(item["Last Modified"]).strftime("%d/%m/%Y"),
+                    "path": current_path,
+                    "size": round(item["Bytes"] / 1024, 2)  # Convertir bytes a kilobytes
+                }
+                structure[parent_path]["files"].append(file_info)
+            except ValueError:
+                print(f"Formato de fecha inválido en {item['Last Modified']}")
 
-    # Asegurarse de que todas las rutas existen en la estructura
-    for path in list(structure.keys()):
-        for folder in structure[path]["folders"]:
-            if folder not in structure:
-                structure[folder] = {"files": [], "folders": []}
+    # Asegurar que las carpetas principales estén en la raíz
+    root_folders = set(folder.split("/")[0] for folder in structure if "/" in folder or folder)
+    if "" not in structure:
+        structure[""] = {"files": [], "folders": []}
+    structure[""]["folders"].extend(folder for folder in root_folders if folder not in structure[""]["folders"])
 
-    return {"structure": structure}
+    return structure

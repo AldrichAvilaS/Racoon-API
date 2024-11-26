@@ -6,10 +6,10 @@ from .auth import openstack_auth_id
 openstack_auth_bp = Blueprint('openstack', __name__)
 
 def get_object_list(user_id, project_id):
-    fetch_url = "http://localhost:10000/object/{user_id}"
-    data = {"user_id": user_id, "project_id": project_id}
+    fetch_url = "http://localhost:10000/object/"
+    data = {"user_id": user_id, "project": project_id}
     try:
-        response = requests.post(fetch_url, json=data)
+        response = requests.get(fetch_url, json=data)
         
         # Verifica si la respuesta fue exitosa (código 200)
         response.raise_for_status()  # Lanza una excepción si la respuesta tiene un error
@@ -53,15 +53,16 @@ def get_object_list_by_path(user_id, project_id, path):
 
 def delete(user, user_scope, project, file_path, file_name):
     token = openstack_auth_id(str(user), project)
+    print(project)
     print(token)
     print("file_path_recibido", file_path)
     print("file_name_recibido", file_name)
     # print("full_path_recibido", full_path)
-
-    file_name = file_path + '/' + file_name
+    if not file_path == '':
+        file_name =  '/' + file_name
 
     # url = f"192.168.1.104:5000/v1/{user}/{object_name}"
-    url = f"http://192.168.1.104:8080/v1/{user_scope}/{user}/{file_name}"
+    url = f"http://192.168.1.104:8080/v1/{user_scope}/{user}{file_name}"
     print(url)
     headers = {
         'X-Auth-Token': token,

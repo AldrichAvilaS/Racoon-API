@@ -12,7 +12,7 @@ from ..db.db import User
 from ..db.path import store_path, zip_path
 from ..logs.logs import log_api_request
 from .path_functions import *
-from ..openstack.load import upload_file_openstack, download_file
+from ..openstack.load import download_file_openstack, upload_file_openstack
 from ..openstack.object import get_object_list, delete
 from ..openstack.conteners import create_path
 
@@ -37,7 +37,12 @@ def upload_file():
     file_data = data['file']  # Archivo codificado en base64
     file_name = data['filename']  # Nombre del archivo
     file_path = data.get('path', '')  # Opcionalmente, se recibe una ruta para guardar el archivo
-    file_project = data.get('project_id', '') 
+    file_project = data.get('project_id', get_user_identifier(user.id))
+
+    print("file_path: ", file_path)
+    print("file_project: ", file_project)
+    print("file_name: ", file_name)
+     
     try:
         # Decodificar el archivo base64
         file_bytes = base64.b64decode(file_data)
@@ -66,8 +71,11 @@ def upload_file():
         # Guardar el archivo
         with open(save_path, 'wb') as file:
             file.write(file_bytes)
+            print("si se escribio: ")
         
+
         upload_file_openstack(get_user_identifier(user.id), user.openstack_id, file_project, file_path , save_path, file_name)
+
 
         log_api_request(get_jwt_identity(), "Subida de archivo exitosa", file_path, file_name, 200)
         return jsonify({"message": "Archivo cargado correctamente"}), 200
@@ -152,8 +160,12 @@ def download_file():
         print("full_file_path: ", full_file_path)
         
         #mandar a descargar el archivo desde openstack
-        download_file(get_user_identifier(user.id), user.openstack_id, file_path, file_path, full_file_path)
+        if not request.args.get('flag'):
+            download_file_openstack(get_user_identifier(user.id), user.openstack_id, get_user_identifier(user.id), file_path, file_path, user_directory)
+        else: 
+            download_file_openstack(get_user_identifier(user.id), user.openstack_id, request.args.get('project_id'), file_path, file_path, user_directory)
         
+        print("full_file_path en funcion: ", full_file_path)
         if not os.path.exists(full_file_path):
             return jsonify({"error": "El archivo no existe"}), 404
 
@@ -161,6 +173,7 @@ def download_file():
         return send_file(full_file_path, as_attachment=True)
 
     except ValueError as ve:
+        print("error: ", ve)
         return jsonify({"error": str(ve)}), 403
     except Exception as e:
         return jsonify({"error": "Error interno del servidor"}), 500
@@ -185,8 +198,10 @@ def delete_file_or_folder():
         return jsonify({"error": "No se proporcionó la ruta del archivo o carpeta a eliminar"}), 400
 
     try:
-        
-        delete(user_identifier, user.openstack_id, target_path, target_path)
+        print("intentar eliminar")
+        print("target_path: ", target_path)
+        print("project_id: ", project_id)
+        delete(user_identifier, user.openstack_id, project_id, target_path, target_path)
 
         log_api_request(get_jwt_identity(), "Eliminación exitosa", "delete", target_path, 200)
         return jsonify({"message": f"'{target_path}' eliminado exitosamente"}), 200
@@ -206,14 +221,12 @@ def list_files_and_folders():
 
     user_identifier = get_user_identifier(user.id)
 
-    if not user.exists():
-        return jsonify({"error": "Usuario no encontrado"}), 404
-
     try:
         # Obtener la estructura de archivos y carpetas
         object_list = get_object_list(user_identifier, user_identifier)
-        print(object_list)
         object_list = object_list['data']
+        object_list = transform_to_structure(object_list)
+        # print(object_list)
         return jsonify({"message": "Estructura obtenida correctamente", "structure": object_list}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -238,6 +251,7 @@ def list_files_and_folders_single():
         object_list = get_object_list(user_identifier, group)
         print(object_list)
         object_list = object_list['data']
+        object_list = transform_to_structure(object_list)
         return jsonify({"message": "Estructura obtenida correctamente", "structure": object_list}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -321,23 +335,13 @@ def create_folder():
     print("data: ", data)
     folder_name = data.get('folder_name')
     parent_dir = data.get('parent_dir', '')
+    project = data.get('project_id', get_user_identifier(user.id))
 
     if not folder_name:
         return jsonify({"error": "No se proporcionó el nombre de la carpeta"}), 400
 
     try:
-        user_directory = get_user_directory(get_user_identifier(user.id))
-        print("user_directory: ", user_directory)
-        parent_directory = secure_path(user_directory, parent_dir)
-        print("parent_directory: ", parent_directory)
-        new_folder_path = os.path.join(parent_directory, folder_name)
-        print("new_folder_path: ", new_folder_path)
-
-        if os.path.exists(new_folder_path):
-            return jsonify({"error": "La carpeta ya existe"}), 400
-
-        # Crear la nueva carpeta
-        os.makedirs(new_folder_path)
+        create_path(get_user_identifier(user.id), user.openstack_id , project, parent_dir, folder_name)
         return jsonify({"message": f"Carpeta '{folder_name}' creada exitosamente"}), 200
 
     except ValueError as ve:
