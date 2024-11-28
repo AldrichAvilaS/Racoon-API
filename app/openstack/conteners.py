@@ -7,9 +7,11 @@ from flask_jwt_extended import get_jwt_identity, jwt_required
 import requests
 from app.openstack.auth import openstack_auth_id
 from ..db.path import *
-def create_project(user_id):
+
+#crear proyecto en openstack
+def create_project(project_id):
     fetch_url = "http://localhost:10000/project/"
-    data = {"user_id": user_id}
+    data = {"project": project_id}
     try:
         response = requests.post(fetch_url, json=data)
         
@@ -28,6 +30,37 @@ def create_project(user_id):
         print("Error en la petición:", err)
     return response.json()
 
+#asignar rol en una proyecto referido en una materia de openstack
+def assigment_role(user_id, project_id, role):
+
+
+    if role == "student":
+        fetch_url = "http://localhost:10000/role/student"
+    elif role == "teacher":
+        fetch_url = "http://localhost:10000/role/teacher"
+    elif role == "academy":
+        fetch_url = "http://localhost:10000/role/academy"
+
+    data = {"user_id": user_id, "project_id": project_id}
+    try:
+        response = requests.post(fetch_url, json=data)
+        
+        # Verifica si la respuesta fue exitosa (código 200)
+        response.raise_for_status()  # Lanza una excepción si la respuesta tiene un error
+
+        # Retorna el contenido de la respuesta
+        return response.json()  # Usar .json() si la respuesta es en JSON, .text si es texto plano
+    except requests.exceptions.HTTPError as errh:
+        print("Error HTTP:", errh)
+    except requests.exceptions.ConnectionError as errc:
+        print("Error de conexión:", errc)
+    except requests.exceptions.Timeout as errt:
+        print("Error de tiempo de espera:", errt)
+    except requests.exceptions.RequestException as err:
+        print("Error en la petición:", err)
+    return response.json()
+
+#crear carpeta virtual en openstack
 def create_path(user, user_scope, project, full_path, path_name):
     token = openstack_auth_id(str(user), project)
     if token:

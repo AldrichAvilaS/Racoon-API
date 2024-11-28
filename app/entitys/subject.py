@@ -4,7 +4,8 @@ from sqlalchemy.exc import IntegrityError
 from ..db.db import Academy, Enrollment, Subject, db, Group, Semester, User, Student, Teacher
 from ..logs.logs import log_api_request  
 from ..authorization.decorators import role_required  
-
+from ..openstack.conteners import create_project, assigment_role
+from . group import create_group_inner_api
 #crear el blueprint para las materias
 subject_bp = Blueprint('subject', __name__)
 
@@ -16,37 +17,57 @@ subject_bp = Blueprint('subject', __name__)
 @jwt_required()  # Requiere autenticación con JWT
 #@role_required(0, 1)  # Administrador (0) y Academia (1)
 def create_subject():
-    user = get_current_user()
+    user = get_jwt_identity()
 
     if not user:
         return jsonify({"error": "Usuario no encontrado"}), 404
 
     data = request.get_json()
-
+    print(data)
     # Validar que se reciban los datos necesarios
-    required_fields = ['subject_name', 'academy_id', 'group_id', 'teacher_id']
+    required_fields = ['subject_name','group_id']
     if not data or not all(field in data for field in required_fields):
-        log_api_request(user.id, "POST - Crear Materia - Datos incompletos", 400)
+        # log_api_request(user.id, "POST - Crear Materia - Datos incompletos", 400)
         return jsonify({"error": "Datos incompletos"}), 400
 
     try:
+        print("se intentara crear la materia")
         # Verificar que la academia exista
-        academy = Academy.query.get(data['academy_id'])
+        academy = user 
         if not academy:
-            log_api_request(user.id, f"POST - Crear Materia - Academia no encontrada (ID: {data['academy_id']})", 404)
+            # log_api_request(user.id, f"POST - Crear Materia - Academia no encontrada (ID: {data['academy_id']})", 404)
             return jsonify({"error": "Academia no encontrada"}), 404
+        print("la academia se verifico", academy)
 
-        # Verificar que el grupo exista
-        group = Group.query.get(data['group_id'])
+        try:
+            # Verificar que el grupo exista si no lo crea
+            group = Group.query.filter_by(name=data['group_id']).first()
+            if not group:
+                group = create_group_inner_api(data['group_id'])
+        except IntegrityError:
+            db.session.rollback()
+            return jsonify({"error": "Error al crear el grupo inexistente"}), 500
+
         if not group:
-            log_api_request(user.id, f"POST - Crear Materia - Grupo no encontrado (ID: {data['group_id']})", 404)
+            # log_api_request(user.id, f"POST - Crear Materia - Grupo no encontrado (ID: {data['group_id']})", 404)
             return jsonify({"error": "Grupo no encontrado"}), 404
+        
+        print("el grupo se verifico", group)
+        
+        data['teacher_id'] = data.get('teacher_id', None)
+        # if data.get['teacher_id'] == '' :
+        #     data['teacher_id'] = None
+        # else:
+        #     # Verificar que el profesor exista y tenga el rol adecuado
+        #     teacher_user = Teacher.query.get(data['teacher_id'])
+        #     if not teacher_user:  
+        #         # log_api_request(user.id, f"POST - Crear Materia - Profesor no encontrado o no válido (ID: {data['teacher_id']})", 404)
+        #         return jsonify({"error": "Profesor no encontrado o no válido"}), 404
+        print("el profesor se verifico", data['teacher_id'])
+        
+        print("se intentara crear el proyecto")
 
-        # Verificar que el profesor exista y tenga el rol adecuado
-        teacher_user = User.query.get(data['teacher_id'])
-        if not teacher_user or teacher_user.role_id != 2:  # Profesor tiene role_id = 2
-            log_api_request(user.id, f"POST - Crear Materia - Profesor no encontrado o no válido (ID: {data['teacher_id']})", 404)
-            return jsonify({"error": "Profesor no encontrado o no válido"}), 404
+        swift_account = create_project(data['subject_name'])
 
         # Crear la nueva materia
         new_subject = Subject(
@@ -54,24 +75,24 @@ def create_subject():
             academy_id=data['academy_id'],  # Academia asociada
             teacher_id=data['teacher_id'],  # Profesor asignado
             group_id=data['group_id'],  # Grupo al que pertenece la materia
-            description=data.get('description', ''),  # Descripción opcional de la materia
-            swift_scope=data.get('swift_scope', '')  # Swift scope opcional si es necesario
+            description=data.get('description', data['subject_name']),  # Descripción opcional de la materia
+            swift_scope = swift_account
         )
 
         db.session.add(new_subject)
         db.session.commit()
 
-        log_api_request(user.id, f"POST - Materia creada, ID: {new_subject.subject_id}, Nombre: {new_subject.subject_name}", 201)
+        # log_api_request(user.id, f"POST - Materia creada, ID: {new_subject.subject_id}, Nombre: {new_subject.subject_name}", 201)
         return jsonify({"message": "Materia creada exitosamente", "subject_id": new_subject.subject_id}), 201
 
     except IntegrityError:
         db.session.rollback()
-        log_api_request(user.id, "POST - Crear Materia - Error de integridad", 500)
+        # log_api_request(user.id, "POST - Crear Materia - Error de integridad", 500)
         return jsonify({"error": "Error al crear la materia"}), 500
 
     except Exception as e:
         db.session.rollback()
-        log_api_request(user.id, f"POST - Crear Materia - Error: {str(e)}", 500)
+        # log_api_request(user.id, f"POST - Crear Materia - Error: {str(e)}", 500)
         return jsonify({"error": str(e)}), 500
 
 

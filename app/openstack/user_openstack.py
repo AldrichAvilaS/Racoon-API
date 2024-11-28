@@ -32,6 +32,7 @@ def create_user(user_id, role):
         print("Error en la petición:", err)
     return response.json()
 
+#peticion a la api de openstack para crear una academia
 def create_academy(user_id):
     try:
         fetch_url = "http://localhost:10000/user/academy"

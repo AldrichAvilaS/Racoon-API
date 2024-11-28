@@ -5,7 +5,7 @@ from sqlalchemy.exc import IntegrityError
 from ..db.db import Academy, Enrollment, Subject, db, Group, Semester, User, Student, Teacher
 from ..logs.logs import log_api_request  
 from ..authorization.decorators import role_required  
-
+from ..openstack.conteners import create_project, assigment_role
 # Crear el blueprint para grupos
 groups_bp = Blueprint('groups', __name__)
 
@@ -25,7 +25,7 @@ def get_current_user():
         else:
             academy = Academy.query.filter_by(academy_id=identifier).first()
             if academy:
-                user = academy.main_teacher.user
+                user = academy
             else:
                 user = User.query.filter_by(id=identifier).first()  # Para administradores
 
@@ -47,37 +47,38 @@ def create_group():
     data = request.get_json()
 
     # Validar que se reciban los datos necesarios
-    if not data or 'name' not in data or 'semester_id' not in data:
-        log_api_request(user.id, "POST - Crear Grupo - Datos incompletos", 400)  # Log opcional
+    if not data or 'name'  not in data:
+        # log_api_request(user.id, "POST - Crear Grupo - Datos incompletos", 400)  # Log opcional
         return jsonify({"error": "Datos incompletos"}), 400
 
     try:
         # Verificar que el semestre exista
-        semester = Semester.query.get(data['semester_id'])
+        semester = db.session.query(Semester).order_by(Semester.created_at.desc()).first()
         if not semester:
-            log_api_request(user.id, f"POST - Crear Grupo - Semestre no encontrado (ID: {data['semester_id']})", 404)
+            # log_api_request(user.id, f"POST - Crear Grupo - Semestre no encontrado (ID: {data['semester_id']})", 404)
             return jsonify({"error": "Semestre no encontrado"}), 404
 
         # Crear el nuevo grupo
         new_group = Group(
             name=data['name'],  # Nombre del grupo (ej. "6CV1")
-            semester_id=data['semester_id']  # ID del semestre asociado
+            semester_id=semester.id  # ID del semestre asociado
         )
         
+
         db.session.add(new_group)
         db.session.commit()
 
-        log_api_request(user.id, f"POST - Grupo creado, ID: {new_group.id}, Nombre: {new_group.name}", 201)  # Log opcional
+        # log_api_request(user.id, f"POST - Grupo creado, ID: {new_group.id}, Nombre: {new_group.name}", 201)  # Log opcional
         return jsonify({"message": "Grupo creado exitosamente", "group_id": new_group.id}), 201
 
     except IntegrityError:
         db.session.rollback()
-        log_api_request(user.id, "POST - Crear Grupo - Error de integridad", 500)  # Log opcional
+        # log_api_request(user.id, "POST - Crear Grupo - Error de integridad", 500)  # Log opcional
         return jsonify({"error": "Error al crear el grupo"}), 500
 
     except Exception as e:
         db.session.rollback()
-        log_api_request(user.id, f"POST - Crear Grupo - Error: {str(e)}", 500)  # Log opcional
+        # log_api_request(user.id, f"POST - Crear Grupo - Error: {str(e)}", 500)  # Log opcional
         return jsonify({"error": str(e)}), 500
  
 #ruta del endpoint | metodo http | funcion a ejecutar | json que recibe | variables que regresa | codigo de respuesta
@@ -104,3 +105,36 @@ def get_groups(semester_id):
     } for group in groups]
 
     return jsonify(groups_data), 200
+
+#funcion para crear un grupo si no existe
+def create_group_inner_api(name):
+
+    try:
+        # Verificar que el semestre exista
+        semester = db.session.query(Semester).order_by(Semester.created_at.desc()).first()
+        if not semester:
+            # log_api_request(user.id, f"POST - Crear Grupo - Semestre no encontrado (ID: {data['semester_id']})", 404)
+            return jsonify({"error": "Semestre no encontrado"}), 404
+
+        # Crear el nuevo grupo
+        new_group = Group(
+            name=name,  # Nombre del grupo (ej. "6CV1")
+            semester_id=semester.id  # ID del semestre asociado
+        )
+        
+
+        db.session.add(new_group)
+        db.session.commit()
+
+        # log_api_request(user.id, f"POST - Grupo creado, ID: {new_group.id}, Nombre: {new_group.name}", 201)  # Log opcional
+        return new_group.id
+
+    except IntegrityError:
+        db.session.rollback()
+        # log_api_request(user.id, "POST - Crear Grupo - Error de integridad", 500)  # Log opcional
+        return jsonify({"error": "Error al crear el grupo"}), 500
+
+    except Exception as e:
+        db.session.rollback()
+        # log_api_request(user.id, f"POST - Crear Grupo - Error: {str(e)}", 500)  # Log opcional
+        return jsonify({"error": str(e)}), 500

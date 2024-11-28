@@ -5,6 +5,7 @@ import requests, json
 from .auth import openstack_auth_id
 openstack_auth_bp = Blueprint('openstack', __name__)
 
+#obtener lista de objetos de un contenedor
 def get_object_list(user_id, project_id):
     fetch_url = "http://localhost:10000/object/"
     data = {"user_id": user_id, "project": project_id}
@@ -26,6 +27,7 @@ def get_object_list(user_id, project_id):
         print("Error en la petición:", err)
     return response.json()
 
+#obtener lista de objetos de un contenedor especifico en un grupo
 def get_object_list_by_path(user_id, project_id, path):
     fetch_url = "http://localhost:10000/object/path"
     data = {"user_id": user_id, "project_id": project_id, "path": path}

@@ -6,7 +6,7 @@ import requests
 
 upload_bp = Blueprint('upload', __name__)
 
-
+#subir archivo a un contenedor en openstack
 def upload_file_openstack(user, user_scope, project, file_path, full_path, file_name):
     
     print("project", project)
@@ -35,7 +35,8 @@ def upload_file_openstack(user, user_scope, project, file_path, full_path, file_
     else:
         print(f"Objeto '{file_name}' subido exitosamente a '{user}'.")
         return jsonify({"message": f"Objeto '{file_name}' subido exitosamente a '{user}'."}), 201
-    
+
+#descargar archivo de un contenedor en openstack    
 def download_file_openstack(user, user_scope, project, file_path, file_name, save_directory):
     
   # Obtener el token de autenticación de OpenStack

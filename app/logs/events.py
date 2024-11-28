@@ -7,7 +7,7 @@ from datetime import datetime
 logs_bp = Blueprint('logs_bp', __name__)
 
 # Obtener logs filtrados por user_identifier, container_name y rango de fechas opcional
-@logs_bp.route('/logs', methods=['GET'])
+@logs_bp.route('/', methods=['GET'])
 @jwt_required()
 #@role_required(0)  # Solo usuarios con rol "Administrador" pueden acceder
 def get_logs():
@@ -39,6 +39,10 @@ def get_logs():
             query = query.filter(APILog.timestamp <= end_date)
         except ValueError:
             return jsonify({"error": "Formato de fecha inválido para end_date. Use YYYY-MM-DD"}), 400
+
+    #query por si no se quiere filtrado
+    if not user_identifier and not container_name and not start_date and not end_date:
+        query = APILog.query
 
     # Ejecutar la consulta y obtener los resultados
     logs = query.all()

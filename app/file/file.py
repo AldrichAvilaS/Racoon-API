@@ -215,7 +215,9 @@ def delete_file_or_folder():
 @file_bp.route('/full-list', methods=['GET'])
 @jwt_required()  # Protegido con JWT
 def list_files_and_folders():
+    print("entro a full-list")
     user = get_current_user()
+    print("user: ", user)
     if not user:
         return jsonify({"error": "Usuario no autenticado"}), 401
 

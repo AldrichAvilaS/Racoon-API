@@ -1,6 +1,7 @@
 # 0.1 Operaciones relacionadas a semestres
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import get_current_user, jwt_required, get_jwt_identity
+from sqlalchemy import func, text
 from sqlalchemy.exc import IntegrityError
 from ..db.db import Academy, Enrollment, Subject, db, Group, Semester, User, Student, Teacher
 from ..logs.logs import log_api_request  
@@ -29,7 +30,7 @@ def create_semester():
         new_semester = Semester(
             semester=data['semester'],  # Nombre del semestre (ej. "2024-01")
             created_at=db.func.current_date(),  # Fecha actual de creación (solo la fecha)
-            finished_at = data.get('finished_at', None)  # Fecha de finalización (opcional)
+            finished_at = data.get('finished_at', func.date_add(func.current_date(), text("INTERVAL 6 MONTH")))  # Fecha de finalización (opcional)
         )
         
         db.session.add(new_semester)

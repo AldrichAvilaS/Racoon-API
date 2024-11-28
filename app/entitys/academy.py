@@ -35,13 +35,15 @@ def create_academy():
     # Crear la nueva academia
     new_academy = Academy(
         name=data['name'],
-        description=data.get('description', ''),
+        description=data.get('description', data['name']),  # Descripción opcional, si no se proporciona se usa el nombre
         main_teacher_id=main_teacher.user_id,  # Asignar el user_id del profesor principal
         password=generate_password_hash(data['name'])
     )
 
     try:
         db.session.add(new_academy)
+        #crear la academia en openstack
+        create_academy(new_academy.academy_id)
         db.session.commit()
         # log_api_request(get_jwt_identity(), 'POST - Academia creada con éxito', "academies", str(new_academy.academy_id), 201)
         return jsonify({"message": "Academia creada con éxito", "academy_id": new_academy.academy_id}), 201
@@ -86,7 +88,6 @@ def get_academies():
         log_api_request(get_jwt_identity(), 'GET - Error al obtener academias', "academies", "none", 500, error_message=str(e))
         return jsonify({"error": "Error al obtener academias."}), 500
 
-
 #ruta del endpoint | metodo http | funcion a ejecutar | json que recibe | variables que regresa | codigo de respuesta
 #http://localhost:5000/academy/<int:academy_id> | GET | get_academy | No requiere datos | academy_data | 200
 # Obtener una academia por ID
@@ -119,7 +120,6 @@ def get_academy(academy_id):
 
 #ruta del endpoint | metodo http | funcion a ejecutar | json que recibe | variables que regresa | codigo de respuesta
 #http://localhost:5000/academy/<int:academy_id> | PUT | update_academy | academy | message | 200
-
 # Actualizar una academia
 @academy_bp.route('/<int:academy_id>', methods=['PUT'])
 @jwt_required()
@@ -179,10 +179,11 @@ def info_academy():
     if not academy:
         return jsonify({"error": "Academia no encontrada"}), 404
 
+    teacher = Teacher.query.filter_by(user_id=academy.main_teacher_id).first()
     academy_data = {
         'academy_id': academy.academy_id,
         'name': academy.name,
         'description': academy.description,
-        'main_teacher_rfc': academy.main_teacher.teacher.rfc
+        'main_teacher_rfc': teacher.rfc
     }
     return jsonify(academy_data), 200

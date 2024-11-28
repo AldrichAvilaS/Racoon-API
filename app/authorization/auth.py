@@ -41,7 +41,7 @@ def get_current_user():
     elif user_type == 'academy':
         academy = Academy.query.filter_by(academy_id=int(identifier)).first()
         if academy:
-            user = academy.main_teacher.user
+            user = academy
     elif user_type == 'admin':
         user = User.query.filter_by(username=identifier).first()
 
