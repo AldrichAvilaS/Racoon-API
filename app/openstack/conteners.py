@@ -33,7 +33,8 @@ def create_project(project_id):
 #asignar rol en una proyecto referido en una materia de openstack
 def assigment_role(user_id, project_id, role):
 
-
+    print("Asignando rol en OpenStack")
+    print
     if role == "student":
         fetch_url = "http://localhost:10000/role/student"
     elif role == "teacher":
@@ -41,8 +42,10 @@ def assigment_role(user_id, project_id, role):
     elif role == "academy":
         fetch_url = "http://localhost:10000/role/academy"
 
-    data = {"user_id": user_id, "project_id": project_id}
+    data = {"user": user_id, "project": project_id}
     try:
+        print("Se intentará asignar el rol")
+        print("data", data)
         response = requests.post(fetch_url, json=data)
         
         # Verifica si la respuesta fue exitosa (código 200)
@@ -74,6 +77,7 @@ def create_path(user, user_scope, project, full_path, path_name):
         path_name = full_path + '/' + path_name
     else:
         path_name = full_path+path_name
+        
     print("path_name", path_name)
     # Crear un archivo temporal vacío que sirva de ancla para crear el directorio
     print(store_path+path_name)

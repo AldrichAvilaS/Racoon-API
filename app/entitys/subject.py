@@ -18,12 +18,13 @@ subject_bp = Blueprint('subject', __name__)
 #@role_required(0, 1)  # Administrador (0) y Academia (1)
 def create_subject():
     user = get_jwt_identity()
-
+    
+    print("user", get_jwt_identity())
     if not user:
         return jsonify({"error": "Usuario no encontrado"}), 404
 
     data = request.get_json()
-    print(data)
+    print("data: ", data)
     # Validar que se reciban los datos necesarios
     required_fields = ['subject_name','group_id']
     if not data or not all(field in data for field in required_fields):
@@ -48,39 +49,52 @@ def create_subject():
             db.session.rollback()
             return jsonify({"error": "Error al crear el grupo inexistente"}), 500
 
-        if not group:
-            # log_api_request(user.id, f"POST - Crear Materia - Grupo no encontrado (ID: {data['group_id']})", 404)
-            return jsonify({"error": "Grupo no encontrado"}), 404
-        
+
         print("el grupo se verifico", group)
         
-        data['teacher_id'] = data.get('teacher_id', None)
-        # if data.get['teacher_id'] == '' :
-        #     data['teacher_id'] = None
-        # else:
-        #     # Verificar que el profesor exista y tenga el rol adecuado
-        #     teacher_user = Teacher.query.get(data['teacher_id'])
-        #     if not teacher_user:  
-        #         # log_api_request(user.id, f"POST - Crear Materia - Profesor no encontrado o no válido (ID: {data['teacher_id']})", 404)
-        #         return jsonify({"error": "Profesor no encontrado o no válido"}), 404
-        print("el profesor se verifico", data['teacher_id'])
+        print("se intentara verificar el profesor")
+        
+        teacher_id = data.get('teacher_id', 'XXXX000000XX0')
+        if teacher_id == '':
+            teacher_id = 'XXXX000000XX0'
+
+        print("teacher_id", teacher_id)
+        # Verificar que el profesor exista y tenga el rol adecuado
+        teacher_user = Teacher.query.filter_by(rfc=teacher_id).first()
+        # teacher_user = Teacher.query.get(teacher_id)
+        print("teacher_user", teacher_user)
+        print("teacher_user.rfc", teacher_user.rfc)
+        if not teacher_user:  
+            # log_api_request(user.id, f"POST - Crear Materia - Profesor no encontrado o no válido (ID: {data['teacher_id']})", 404)
+            return jsonify({"error": "Profesor no encontrado o no válido"}), 404
+        
+        print("el profesor se verifico", teacher_user.user_id)
         
         print("se intentara crear el proyecto")
 
-        swift_account = create_project(data['subject_name'])
+        semester = Semester.query.filter_by(id=group.semester_id).first()
+        
+        project_name = f"{semester.semester}_{group.name}_{data['subject_name']}"
+        print("project name: ", project_name)
 
+        swift_account = create_project(project_name)
+        swift_account = swift_account['account']
+        print("swift_account ", swift_account)
         # Crear la nueva materia
         new_subject = Subject(
-            subject_name=data['subject_name'],  # Nombre de la materia
-            academy_id=data['academy_id'],  # Academia asociada
-            teacher_id=data['teacher_id'],  # Profesor asignado
-            group_id=data['group_id'],  # Grupo al que pertenece la materia
+            subject_name=project_name,  # Nombre de la materia
+            academy_id=academy,  # Academia asociada
+            teacher_id=teacher_user.user_id,  # Profesor asignado
+            group_id=group.id,  # Grupo al que pertenece la materia
             description=data.get('description', data['subject_name']),  # Descripción opcional de la materia
             swift_scope = swift_account
         )
 
         db.session.add(new_subject)
         db.session.commit()
+        assigment_role(academy, project_name, "academy")
+        if not teacher_id == 'XXXX000000XX0':
+            assigment_role(teacher_user.rfc, project_name, "teacher")
 
         # log_api_request(user.id, f"POST - Materia creada, ID: {new_subject.subject_id}, Nombre: {new_subject.subject_name}", 201)
         return jsonify({"message": "Materia creada exitosamente", "subject_id": new_subject.subject_id}), 201
@@ -195,3 +209,9 @@ def get_swift_scope():
         return jsonify({"error": "Materia no encontrada"}), 404
 
     return jsonify({"swift_scope": subject.swift_scope}), 200
+
+def get_group_full_name(subject_id):
+    subject = Subject.query.get(subject_id)
+    group = Group.query.get(subject.group_id)
+    semester = Semester.query.get(group.semester_id)
+    return f"{semester.name}_{group.name}_{subject.subject_name}"

@@ -4,7 +4,8 @@ from sqlalchemy.exc import IntegrityError
 from ..db.db import Academy, Enrollment, Subject, db, Group, Semester, User, Student, Teacher
 from werkzeug.security import generate_password_hash
 from ..logs.logs import log_api_request  
-from ..authorization.decorators import role_required  
+from ..authorization.decorators import role_required
+from ..openstack.user_openstack import create_academy_openstack
 
 #crear el blueprint para las academias
 
@@ -19,32 +20,44 @@ academy_bp = Blueprint('academy', __name__)
 #@role_required(0,1)  # Solo administradores pueden crear academias
 def create_academy():
     data = request.get_json()
+    print("data", data) 
 
+    print("validando campos")
     # Validar datos requeridos
-    required_fields = ['name', 'main_teacher_rfc']
-    if not data or not all(field in data for field in required_fields):
-        # log_api_request(get_jwt_identity(), 'POST - Crear Academia - Datos incompletos', "academies", "none", 400)
-        return jsonify({"error": "Datos incompletos"}), 400
-
+    # if not data or 'name' not in data or 'main_teacher_rfc' not in data:
+    #     # log_api_request(get_jwt_identity(), 'POST - Crear Academia - Datos incompletos', "academies", "none", 400)
+    #     print("error datos incompletos")
+    #     return jsonify({"error": "Datos incompletos"}), 400
+    
     # Verificar que el profesor principal exista y sea un profesor
+    print("buscando profesor principal")
     main_teacher = Teacher.query.filter_by(rfc=data['main_teacher_rfc']).first()
+    print("main_teacher", main_teacher.user_id)
     if not main_teacher:
         # log_api_request(get_jwt_identity(), 'POST - Crear Academia - Profesor principal no encontrado', "academies", "none", 404)
+        print("error profesor principal no encontrado")
         return jsonify({"error": "Profesor principal no encontrado"}), 404
 
-    # Crear la nueva academia
-    new_academy = Academy(
+
+
+    try:
+        # Crear la nueva academia
+        new_academy = Academy(
         name=data['name'],
         description=data.get('description', data['name']),  # Descripción opcional, si no se proporciona se usa el nombre
         main_teacher_id=main_teacher.user_id,  # Asignar el user_id del profesor principal
         password=generate_password_hash(data['name'])
-    )
+        )
+        print("new_academy", new_academy)
 
-    try:
         db.session.add(new_academy)
-        #crear la academia en openstack
-        create_academy(new_academy.academy_id)
         db.session.commit()
+        #crear la academia en openstack
+        print("se intentara crear la academia")
+        print("new_academy.academy_id", new_academy.academy_id)
+        create_academy_openstack(new_academy.academy_id)
+        
+        print("se creo la academia")
         # log_api_request(get_jwt_identity(), 'POST - Academia creada con éxito', "academies", str(new_academy.academy_id), 201)
         return jsonify({"message": "Academia creada con éxito", "academy_id": new_academy.academy_id}), 201
     except IntegrityError as e:

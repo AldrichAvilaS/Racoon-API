@@ -60,8 +60,9 @@ def delete(user, user_scope, project, file_path, file_name):
     print("file_path_recibido", file_path)
     print("file_name_recibido", file_name)
     # print("full_path_recibido", full_path)
-    if not file_path == '':
-        file_name =  '/' + file_name
+    
+    # if not file_path == '':
+    #     file_name =  '/' + file_name
 
     # url = f"192.168.1.104:5000/v1/{user}/{object_name}"
     url = f"http://192.168.1.104:8080/v1/{user_scope}/{user}{file_name}"

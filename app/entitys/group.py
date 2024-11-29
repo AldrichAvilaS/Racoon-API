@@ -127,7 +127,7 @@ def create_group_inner_api(name):
         db.session.commit()
 
         # log_api_request(user.id, f"POST - Grupo creado, ID: {new_group.id}, Nombre: {new_group.name}", 201)  # Log opcional
-        return new_group.id
+        return new_group
 
     except IntegrityError:
         db.session.rollback()

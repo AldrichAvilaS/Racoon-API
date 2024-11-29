@@ -19,9 +19,17 @@ def upload_file_openstack(user, user_scope, project, file_path, full_path, file_
         data = f.read()
         
     file_name = file_path + '/' + file_name
-    print(file_name)
+    print("file_name ",file_name)
+    # Contar las barras diagonales (considerando ambas / y \)
+    count_slashes = file_name.count("/") + file_name.count("\\")
     # url = f"192.168.1.104:5000/v1/{user}/{object_name}"
-    url = f"http://192.168.1.104:8080/v1/{user_scope}/{user}{file_name}"
+    if count_slashes > 2:
+        print("menos de 2 slashes ")
+        url = f"http://192.168.1.104:8080/v1/{user_scope}/{user}/{file_name}"
+    else:
+        url = f"http://192.168.1.104:8080/v1/{user_scope}/{user}//{file_name}"
+
+    # url = f"http://192.168.1.104:8080/v1/{user_scope}/{user}{file_name}"
     print(url)
     headers = {
         'X-Auth-Token': token,
@@ -49,9 +57,22 @@ def download_file_openstack(user, user_scope, project, file_path, file_name, sav
     # Construir la ruta completa del archivo en el contenedor
     file_full_path = f"{file_path}/{file_name}"
     print(f"Descargando archivo: {file_name}")
+    print("file_path", file_path)
+    print("file_name", file_name)
+    # Asegurarte de limpiar barras iniciales en file_name
+    #saber si un file_name tiene una barra al inicio
+    
+    # Contar las barras diagonales (considerando ambas / y \)
+    count_slashes = file_name.count("/") + file_name.count("\\")
 
+    
+    print("file_name", file_name)
     # URL de descarga del archivo desde OpenStack Swift
-    url = f"http://192.168.1.104:8080/v1/{user_scope}/{user}{file_path}"
+    if count_slashes > 2:
+
+        url = f"http://192.168.1.104:8080/v1/{user_scope}/{user}{file_name}"
+    else:
+        url = f"http://192.168.1.104:8080/v1/{user_scope}/{user}/{file_name}"
     print(url)
 
     headers = {
@@ -71,9 +92,12 @@ def download_file_openstack(user, user_scope, project, file_path, file_name, sav
         file_name = file_name.lstrip("/\\")  # Eliminar cualquier barra inicial
         print("file_name", file_name)
 
-        # Ruta completa donde se guardará el archivo localmente
+        print("save_directory", save_directory)
+          # Normalizar la ruta para asegurar el formato correcto del sistema operativo
         local_file_path = os.path.join(save_directory, file_name)
-
+        local_file_path = os.path.normpath(local_file_path)  # Normaliza la ruta según el sistema operativo
+        only_path = os.path.dirname(local_file_path)
+        os.makedirs(only_path, exist_ok=True)
         print(f"Guardando archivo en: {local_file_path}")
 
         # Guardar el contenido del archivo en el sistema local

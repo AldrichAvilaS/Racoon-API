@@ -213,8 +213,8 @@ def delayed_file_deletion(filepath, delay=180):
 def transform_to_structure(data):
     structure = {}
 
+    # Procesar los datos
     for item in data:
-        # Validar que el item contiene las claves necesarias
         if not all(key in item for key in ["Name", "Last Modified", "Bytes"]):
             continue
 
@@ -222,37 +222,44 @@ def transform_to_structure(data):
         name = item["Name"].strip("/")  # Eliminar las barras iniciales y finales
         is_dir = item["Name"].endswith("/")  # Detectar si es un directorio basado en la barra final
         parts = name.split("/")
+
         current_path = "/".join(parts)
         parent_path = "/".join(parts[:-1]) if len(parts) > 1 else ""
 
         # Asegurar que los directorios padres existan en la estructura
-        for i in range(len(parts)):
-            folder_path = "/".join(parts[:i])
+        for i in range(1, len(parts)):  # Comenzamos desde 1 para evitar incluir el nivel raíz
+            folder_path = "/".join(parts[:i])  # Carpeta actual en el camino
             if folder_path not in structure:
                 structure[folder_path] = {"files": [], "folders": []}
 
-            # Agregar el directorio actual al directorio padre
-            if i > 0:  # Ignorar el nivel raíz
-                parent = "/".join(parts[:i-1])
-                if folder_path not in structure[parent]["folders"]:
-                    structure[parent]["folders"].append(folder_path)
+            # Agregar la carpeta actual al directorio padre
+            parent = "/".join(parts[:i-1]) if i > 1 else ""  # Directorio padre
+            if parent and folder_path not in structure[parent]["folders"]:
+                structure[parent]["folders"].append(folder_path)
 
+        # Si es un directorio, lo agregamos sin archivos
         if is_dir:
-            # Es un directorio (ya manejado en el bucle anterior)
+            if current_path not in structure:
+                structure[current_path] = {"files": [], "folders": []}
+            # Asegurarnos de agregar el directorio vacío como una carpeta de su directorio padre
+            if parent_path and current_path not in structure[parent_path]["folders"]:
+                structure[parent_path]["folders"].append(current_path)
             continue
         else:
-            # Es un archivo
+            # Si es un archivo, agregamos la información
             try:
                 file_info = {
                     "date": datetime.fromisoformat(item["Last Modified"]).strftime("%d/%m/%Y"),
                     "path": current_path,
                     "size": round(item["Bytes"] / 1024, 2)  # Convertir bytes a kilobytes
                 }
+                if parent_path not in structure:
+                    structure[parent_path] = {"files": [], "folders": []}
                 structure[parent_path]["files"].append(file_info)
             except ValueError:
                 print(f"Formato de fecha inválido en {item['Last Modified']}")
 
-    # Asegurar que las carpetas principales estén en la raíz
+    # Asegurarse de que las carpetas principales estén en la raíz
     root_folders = set(folder.split("/")[0] for folder in structure if "/" in folder or folder)
     if "" not in structure:
         structure[""] = {"files": [], "folders": []}

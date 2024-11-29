@@ -219,6 +219,7 @@ def list_files_and_folders():
     user = get_current_user()
     print("user: ", user)
     if not user:
+        print("no user")
         return jsonify({"error": "Usuario no autenticado"}), 401
 
     user_identifier = get_user_identifier(user.id)
@@ -258,6 +259,32 @@ def list_files_and_folders_single():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+# Ruta para crear una nueva carpeta
+@file_bp.route('/create-folder', methods=['POST'])
+@jwt_required()
+def create_folder():
+    user = get_current_user()
+    if not user:
+        return jsonify({"error": "Usuario no autenticado"}), 401
+
+    data = request.get_json()
+    print("data: ", data)
+    folder_name = data.get('folder_name')
+    parent_dir = data.get('parent_dir', '')
+    project = data.get('project_id', get_user_identifier(user.id))
+
+    if not folder_name:
+        return jsonify({"error": "No se proporcionó el nombre de la carpeta"}), 400
+
+    try:
+        create_path(get_user_identifier(user.id), user.openstack_id , project, parent_dir, folder_name)
+        return jsonify({"message": f"Carpeta '{folder_name}' creada exitosamente"}), 200
+
+    except ValueError as ve:
+        return jsonify({"error": str(ve)}), 403
+    except Exception as e:
+        return jsonify({"error": "Error interno del servidor"}), 500
+    
 #--------------------------------------------------------------************--------------------------------------------------------------#
 
 # Ruta para descargar una carpeta como ZIP
@@ -325,32 +352,7 @@ def download_folder():
     except Exception as e:
         return jsonify({"error": f"Error al comprimir la carpeta: {str(e)}"}), 500
     
-# Ruta para crear una nueva carpeta
-@file_bp.route('/create-folder', methods=['POST'])
-@jwt_required()
-def create_folder():
-    user = get_current_user()
-    if not user:
-        return jsonify({"error": "Usuario no autenticado"}), 401
 
-    data = request.get_json()
-    print("data: ", data)
-    folder_name = data.get('folder_name')
-    parent_dir = data.get('parent_dir', '')
-    project = data.get('project_id', get_user_identifier(user.id))
-
-    if not folder_name:
-        return jsonify({"error": "No se proporcionó el nombre de la carpeta"}), 400
-
-    try:
-        create_path(get_user_identifier(user.id), user.openstack_id , project, parent_dir, folder_name)
-        return jsonify({"message": f"Carpeta '{folder_name}' creada exitosamente"}), 200
-
-    except ValueError as ve:
-        return jsonify({"error": str(ve)}), 403
-    except Exception as e:
-        return jsonify({"error": "Error interno del servidor"}), 500
-    
 # Ruta para mover archivos o carpetas
 @file_bp.route('/move', methods=['POST'])
 @jwt_required()

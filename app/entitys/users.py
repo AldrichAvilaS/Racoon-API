@@ -80,7 +80,10 @@ def add_user():
     if isinstance(password, int):
         password = str(password)
     hashed_password = generate_password_hash(password)
-    new_user = User(
+
+
+    try:
+        new_user = User(
         username=data['username'],
         email=data['email'],
         password=hashed_password,
@@ -89,8 +92,6 @@ def add_user():
         storage_limit = 2,  # Por defecto, 2 GB de almacenamiento
         openstack_id = '0'
     )
-
-    try:
         print("se intentara en el try creara un usuario")
         db.session.add(new_user)
         db.session.commit()
