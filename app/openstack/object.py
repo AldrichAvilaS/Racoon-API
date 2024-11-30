@@ -1,4 +1,5 @@
 #logica que recibe un archivo desde un endpoint para despues mandar el archivo por una request a los contenedores de openstack
+import os
 from flask import Blueprint, jsonify, request
 from flask_jwt_extended import jwt_required
 import requests, json
@@ -65,7 +66,11 @@ def delete(user, user_scope, project, file_path, file_name):
     #     file_name =  '/' + file_name
 
     # url = f"192.168.1.104:5000/v1/{user}/{object_name}"
-    url = f"http://192.168.1.104:8080/v1/{user_scope}/{user}{file_name}"
+    count_slashes = file_name.count("/") + file_name.count("\\")
+    if count_slashes >= 2:
+        url = f"http://192.168.1.104:8080/v1/{user_scope}/{user}/{file_name}"
+    else:
+        url = f"http://192.168.1.104:8080/v1/{user_scope}/{user}{file_name}"
     print(url)
     headers = {
         'X-Auth-Token': token,
@@ -87,20 +92,47 @@ def move_data(user, user_scope, project, file_path, file_name, new_path):
     print("file_name_recibido", file_name)
     # print("full_path_recibido", full_path)
 
-    file_name = file_path + '/' + file_name
+    # Extraer nombre del archivo
+    nombre_archivo = os.path.basename(file_name)
+
+    # Generar la nueva ruta
+    directorio_generado = os.path.join(new_path, nombre_archivo)
+    directorio_generado = directorio_generado.replace("\\", "/")
+    print("directorio_generado",directorio_generado)
+    # file_name = file_path + '/' + file_name
+    # print("file_name updated",file_name)
 
     # url = f"192.168.1.104:5000/v1/{user}/{object_name}"
-    url = f"http://192.168.1.104:8080/v1/{user_scope}/{user}/{file_name}"
+
+    count_slashes = file_path.count("/") + file_path.count("\\")
+    if count_slashes >= 2:
+        print("con filepath")
+        url = f"http://192.168.1.104:8080/v1/{user_scope}/{user}/{file_path}"
+    else:
+        print("con file_name")
+        url = f"http://192.168.1.104:8080/v1/{user_scope}/{user}/{file_name}"
+
+    # url = f"http://192.168.1.104:8080/v1/{user_scope}/{user}{file_path}"
     print(url)
     headers = {
         'X-Auth-Token': token,
-        'X-Object-Meta-name': new_path + '/' + file_name
+        'Destination': f'/{user}/{directorio_generado}'  # Nuevo nombre del objeto dentro del contenedor
     }
 
-    response = requests.post(url, headers=headers)
+    # Realizar la solicitud COPY
+    response = requests.request('COPY', url, headers=headers)
     # response = requests.get(url, headers=headers)
-
+    print("response: ",response)
+    # url = f"http://192.168.1.104:8080/v1/{user_scope}/{user}{file_path}"
+    headers = {
+        'X-Auth-Token': token,
+    } 
+    response2 = requests.delete(url, headers=headers)
+    print("response2: ",response2)  
+    # response = requests.get(url, headers=headers)
+    print("response: ",response)
     if response.status_code not in [201, 202, 204]:
+        print(response.text)
         raise Exception(f"Error al subir el objeto: {response.status_code} - {response.text}")
     else:
         print(f"Objeto '{file_name}' subido exitosamente a '{user}'.")

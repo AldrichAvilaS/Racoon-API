@@ -15,18 +15,19 @@ def upload_file_openstack(user, user_scope, project, file_path, full_path, file_
     print("file_path_recibido", file_path)
     print("file_name_recibido", file_name)
     print("full_path_recibido", full_path)
+
     with open(full_path, 'rb') as f:
         data = f.read()
         
-    file_name = file_path + '/' + file_name
+    
     print("file_name ",file_name)
     # Contar las barras diagonales (considerando ambas / y \)
     count_slashes = file_name.count("/") + file_name.count("\\")
     # url = f"192.168.1.104:5000/v1/{user}/{object_name}"
-    if count_slashes > 2:
-        print("menos de 2 slashes ")
+    if file_path == '':
         url = f"http://192.168.1.104:8080/v1/{user_scope}/{user}/{file_name}"
     else:
+        file_name = file_path + '/' + file_name
         url = f"http://192.168.1.104:8080/v1/{user_scope}/{user}//{file_name}"
 
     # url = f"http://192.168.1.104:8080/v1/{user_scope}/{user}{file_name}"
@@ -70,9 +71,9 @@ def download_file_openstack(user, user_scope, project, file_path, file_name, sav
     # URL de descarga del archivo desde OpenStack Swift
     if count_slashes > 2:
 
-        url = f"http://192.168.1.104:8080/v1/{user_scope}/{user}{file_name}"
-    else:
         url = f"http://192.168.1.104:8080/v1/{user_scope}/{user}/{file_name}"
+    else:
+        url = f"http://192.168.1.104:8080/v1/{user_scope}/{user}{file_name}"
     print(url)
 
     headers = {

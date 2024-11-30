@@ -13,7 +13,7 @@ from ..db.path import store_path, zip_path
 from ..logs.logs import log_api_request
 from .path_functions import *
 from ..openstack.load import download_file_openstack, upload_file_openstack
-from ..openstack.object import get_object_list, delete
+from ..openstack.object import get_object_list, delete, move_data
 from ..openstack.conteners import create_path
 
 file_bp = Blueprint('file', __name__)
@@ -364,26 +364,38 @@ def move_file_or_folder():
     data = request.get_json()
     source_path = data.get('source_path')
     destination_path = data.get('destination_path')
+    file_name = os.path.basename(source_path)
+
+    print("source_path: ", source_path)
+    print("destination_path: ", destination_path)
+    print("file_name: ", file_name)
 
     if not source_path or not destination_path:
         return jsonify({"error": "No se proporcionaron las rutas de origen o destino"}), 400
 
     try:
-        user_directory = get_user_directory(get_user_identifier(user.id))
-        print("secure de full_source_path: ")
-        full_source_path = secure_path(user_directory, source_path)
-        print("secure de full_destination_path: ")
-        full_destination_path = secure_path(user_directory, destination_path)
+        if not data.get('project_id'):
+            project = get_user_identifier(user.id)
+            user_scope = user.openstack_id
+        else:
+            project = data.get('project_id')
+        print("user identifier: ", get_user_identifier(user.id))
+        move_data(get_user_identifier(user.id), user_scope, project, source_path, file_name, destination_path)
+       # user_directory = get_user_directory(get_user_identifier(user.id))
+        # print("secure de full_source_path: ")
+        # full_source_path = secure_path(user_directory, source_path)
+        # print("secure de full_destination_path: ")
+        # full_destination_path = secure_path(user_directory, destination_path)
 
-        if not os.path.exists(full_source_path):
-            return jsonify({"error": "El archivo o carpeta de origen no existe"}), 404
+        # if not os.path.exists(full_source_path):
+        #     return jsonify({"error": "El archivo o carpeta de origen no existe"}), 404
 
-        # Crear el directorio de destino si no existe
-        os.makedirs(os.path.dirname(full_destination_path), exist_ok=True)
-        # Mover el archivo o carpeta
-        shutil.move(full_source_path, full_destination_path)
+        # # Crear el directorio de destino si no existe
+        # os.makedirs(os.path.dirname(full_destination_path), exist_ok=True)
+        # # Mover el archivo o carpeta
+        # shutil.move(full_source_path, full_destination_path)
 
-        log_api_request(get_jwt_identity(), "Movimiento exitoso", "move", source_path, 200)
+        # log_api_request(get_jwt_identity(), "Movimiento exitoso", "move", source_path, 200)
         return jsonify({"message": f"'{source_path}' movido exitosamente a '{destination_path}'"}), 200
 
     except ValueError as ve:
