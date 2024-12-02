@@ -69,5 +69,23 @@ def get_semesters():
 
     return jsonify(semesters_data), 200
 
+#Endpoint para obtener todos los grupos de ese semestre
+@semester_bp.route('/<int:semester_id>/groups', methods=['GET'])
+@jwt_required()  # Requiere autenticación con JWT
+#@role_required(0, 1)  # Administrador (0) y Academia (1)
+def get_groups_by_semester(semester_id):
+    # Obtener todos los grupos del semestre
+    groups = Group.query.filter_by(semester_id=semester_id).all()
 
+    # Serializar los datos
+    groups_data = [{
+        "group_id": group.group_id,
+        "group_name": group.group_name,
+        "semester_id": group.semester_id,
+        "subject_id": group.subject_id,
+        "teacher_id": group.teacher_id,
+        "status": group.status
+    } for group in groups]
+
+    return jsonify(groups_data), 200
 

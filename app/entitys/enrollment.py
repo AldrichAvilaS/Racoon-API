@@ -74,7 +74,7 @@ def create_enrollment():
 
 #ruta del endpoint | metodo http | funcion a ejecutar | json que recibe | variables que regresa | codigo de respuesta
 #http://localhost:5000/enrollment/get-enrolled-students | GET | get_enrolled_students | subject_id | students | 200
-
+ 
 #Endpoint para obtener alumnos inscritos en una materia
 @enrollment_bp.route('/get-enrolled-students', methods=['GET'])
 @jwt_required()  # Requiere autenticación con JWT
