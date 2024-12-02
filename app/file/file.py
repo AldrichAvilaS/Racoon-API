@@ -223,7 +223,7 @@ def list_files_and_folders():
         return jsonify({"error": "Usuario no autenticado"}), 401
 
     user_identifier = get_user_identifier(user.id)
-
+    print("user_identifier: ", user_identifier)
     try:
         # Obtener la estructura de archivos y carpetas
         object_list = get_object_list(user_identifier, user_identifier)
