@@ -112,7 +112,9 @@ class Enrollment(db.Model):
     subject = db.relationship('Subject', backref='enrollments')
 
     def __repr__(self):
-        return f'<Enrollment {self.user.username} - {self.subject.subject_name}>'
+        user = User.query.get(self.user_id)
+        subject = Subject.query.get(self.subject_id)
+        return f'<Enrollment {user.username} - {subject.subject_name}>'
 
 # Modelo de aviso
 class Notice(db.Model):

@@ -86,8 +86,7 @@ def create_subject():
             academy_id=academy,  # Academia asociada
             teacher_id=teacher_user.user_id,  # Profesor asignado
             group_id=group.id,  # Grupo al que pertenece la materia
-            description=data.get('description', data['subject_name']),  # Descripción opcional de la materia
-            swift_scope = swift_account
+            description=data.get('description', data['subject_name'])
         )
 
         db.session.add(new_subject)
@@ -117,28 +116,31 @@ def create_subject():
 @jwt_required()  # Requiere autenticación con JWT
 #@role_required(0, 1)  # Administrador (0) y Academia (1)
 def get_subjects():
-    user = get_current_user()
+    print("se intentara obtener las materias de la academia: ")
+    user= get_jwt_identity()
+    # user = get_current_user()
 
     if not user:
         return jsonify({"error": "Usuario no encontrado"}), 404
-
-    # Obtener todas las materias de la academia del usuario
-    subjects = Subject.query.filter_by(academy_id=user.academy_id).all()
+    print("user", user)
+    # Obtener todas las materias de la academia de  l usuario
+    subjects = Subject.query.filter_by(academy_id=user).all()
 
     subjects_data = []
     for subject in subjects:
         teacher = Teacher.query.filter_by(user_id=subject.teacher_id).first()
         group = Group.query.get(subject.group_id)
+        teacher_user = User.query.get(teacher.user_id)
         subjects_data.append({
             "subject_id": subject.subject_id,
             "subject_name": subject.subject_name,
-            "teacher_name": teacher.full_name,
+            "teacher_name": teacher_user.username,
             "group_name": group.name,
-            "description": subject.description,
-            "swift_scope": subject.swift_scope
+            "description": subject.description
         })
+        # print("subjects_data", subjects_data)
 
-    log_api_request(user.id, f"GET - Obtener materias de la academia (ID: {user.academy_id})", 200)
+    # log_api_request(user.id, f"GET - Obtener materias de la academia (ID: {user.academy_id})", 200)
     return jsonify(subjects_data), 200
 
 
@@ -149,7 +151,7 @@ def get_subjects():
 @jwt_required()  # Requiere autenticación con JWT
 #@role_required(0, 1)  # Administrador (0) y Academia (1)
 def get_subject_by_group():
-    user = get_current_user()
+    user = get_jwt_identity()
 
     if not user:
         return jsonify({"error": "Usuario no encontrado"}), 404
@@ -178,13 +180,56 @@ def get_subject_by_group():
         "subject_name": subject.subject_name,
         "teacher_name": teacher.full_name,
         "group_name": group.name,
-        "description": subject.description,
-        "swift_scope": subject.swift_scope
+        "description": subject.description
     }
 
     log_api_request(user.id, f"GET - Materia por Grupo (ID: {group_id})", 200)
     return jsonify(subject_data), 200
 
+#ruta del endpoint | metodo http | funcion a ejecutar | json que recibe | variables que regresa | codigo de respuesta
+#http://localhost:5000/subject/subject-by-id | GET | get_subject_by_id | subject_id | subject_data | 200
+#endpoint para obtener los alumnos de una materia
+@subject_bp.route('/subject-by-id', methods=['POST'])
+@jwt_required()  # Requiere autenticación con JWT
+#@role_required(0, 1)  # Administrador (0) y Academia (1)
+def get_subject_by_id():
+    user = get_jwt_identity()
+    print("user", user)
+    print("obtener alumnos de una materia")
+    if not user:
+        return jsonify({"error": "Usuario no encontrado"}), 404
+
+    data = request.get_json()
+    print("data", data)
+    subject_id = data['subject_id']
+    # subject_id = data('subject_id')
+
+    if not subject_id:
+        return jsonify({"error": "Datos incompletos"}), 400
+
+    # Verificar que la materia exista
+    subject = Subject.query.get(subject_id)
+    if not subject:
+        return jsonify({"error": "Materia no encontrada"}), 404
+
+    teacher = Teacher.query.filter_by(user_id=subject.teacher_id).first()
+    group = Group.query.get(subject.group_id)
+    #obtener lista de alumnos inscritos en la materia
+    students = Enrollment.query.filter_by(subject_id=subject_id).all()
+    students_data = []
+    for student in students:
+        user = User.query.get(student.user_id)
+        student_user = Student.query.get(student.user_id)
+        students_data.append({
+            "student_id": student_user.boleta,
+            "full_name": user.username,
+            "email": user.email,
+            "group": group.name
+        })
+    
+    
+
+    return jsonify(students_data), 200
 
 #ruta del endpoint | metodo http | funcion a ejecutar | json que recibe | variables que regresa | codigo de respuesta
 #http://localhost:5000/subject/get-swift-scope | GET | get_swift_scope | subject_id | swift_scope | 200
@@ -193,7 +238,7 @@ def get_subject_by_group():
 @jwt_required()  # Requiere autenticación con JWT
 #@role_required(0, 1)  # Administrador (0) y Academia (1)
 def get_swift_scope():
-    user = get_current_user()
+    user = get_jwt_identity()
 
     if not user:
         return jsonify({"error": "Usuario no encontrado"}), 404

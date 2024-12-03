@@ -174,7 +174,7 @@ def get_current_user():
         else:
             academy = Academy.query.filter_by(academy_id=identifier).first()
             if academy:
-                user = academy.main_teacher.user
+                user = academy
             else:
                 # Asumimos que los administradores se autentican con user.id
                 user = User.query.filter_by(id=identifier, role_id=get_role_id_by_name('Administrador')).first()
@@ -249,7 +249,7 @@ def transform_to_structure(data):
             # Si es un archivo, agregamos la información
             try:
                 file_info = {
-                    "date": datetime.fromisoformat(item["Last Modified"]).strftime("%d/%m/%Y"),
+                    "date": datetime.fromisoformat(item["Last Modified"]).strftime("%Y/%m/%d"),
                     "path": current_path,
                     "size": round(item["Bytes"] / 1024, 2)  # Convertir bytes a kilobytes
                 }

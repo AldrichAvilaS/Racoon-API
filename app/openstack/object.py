@@ -8,8 +8,10 @@ openstack_auth_bp = Blueprint('openstack', __name__)
 
 #obtener lista de objetos de un contenedor
 def get_object_list(user_id, project_id):
+
     fetch_url = "http://localhost:10000/object/"
     data = {"user_id": user_id, "project": project_id}
+    print("data", data)
     try:
         response = requests.get(fetch_url, json=data)
         
@@ -31,16 +33,17 @@ def get_object_list(user_id, project_id):
 #obtener lista de objetos de un contenedor especifico en un grupo
 def get_object_list_by_path(user_id, project_id, path):
     fetch_url = "http://localhost:10000/object/path"
-    data = {"user_id": user_id, "project_id": project_id, "path": path}
+    data = {"user_id": user_id, "project": project_id, "path": path}
     try:
+        print("entro a get_object_by_path", data)
         response = requests.post(fetch_url, json=data)
         
         # Verifica si la respuesta fue exitosa (código 200)
         response.raise_for_status()  # Lanza una excepción si la respuesta tiene un error
 
         #obtener user_info de response
-        user_info = response.json()['user_info']
-        
+        user_info = response.json()['data']
+        # print("user_info", user_info)
         # Retorna el contenido de la respuesta
         return user_info  # Usar .json() si la respuesta es en JSON, .text si es texto plano
     except requests.exceptions.HTTPError as errh:

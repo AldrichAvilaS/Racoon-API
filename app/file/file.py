@@ -12,7 +12,7 @@ from ..db.db import User
 from ..db.path import store_path, zip_path
 from ..logs.logs import log_api_request
 from .path_functions import *
-from ..openstack.load import download_file_openstack, upload_file_openstack
+from ..openstack.load import download_file_openstack, download_path_openstack, upload_file_openstack
 from ..openstack.object import get_object_list, delete, move_data
 from ..openstack.conteners import create_path
 
@@ -239,19 +239,26 @@ def list_files_and_folders():
 @jwt_required()  # Protegido con JWT
 def list_files_and_folders_single():
     data = request.get_json()
+
+    print("data: ", data)
+    user = data['user_id']
+    group = data['project_id']
     
-    user = data.get('user')
-    group = data.get('group')
+
+    # user = User.query.filter_by(id=user).first()
+
+    user_identifier = get_user_identifier(user)
+    print("user_identifier: ", user_identifier)
+
+    print("user a consultar: ", user)
+
+    #obtener el usuario dependiendo del id
     
-    user_identifier = get_user_identifier(user.id)
 
     print("user_directory: ")
-    
-    if not user.exists():
-        return jsonify({"error": "Directorio del usuario no encontrado"}), 404
 
     try:
-        object_list = get_object_list(user_identifier, group)
+        object_list = get_object_list(user, group)
         print(object_list)
         object_list = object_list['data']
         object_list = transform_to_structure(object_list)
@@ -288,57 +295,90 @@ def create_folder():
 #--------------------------------------------------------------************--------------------------------------------------------------#
 
 # Ruta para descargar una carpeta como ZIP
-@file_bp.route('/download-folder', methods=['GET'])
+@file_bp.route('/download-folder', methods=['POST'])
 @jwt_required()  # Proteger con JWT
 def download_folder():
     user = get_current_user()
     if not user:
         return jsonify({"error": "Usuario no autenticado"}), 401
     
+    data = request.get_json()
+
+    #recibir la ruta por url
+    folder_path = '/'+data['folder_path']
+    print("folder_path: ", folder_path)
     # Recibir la ruta de la carpeta que se desea comprimir
-    folder_path = request.args.get('folder_path')
+    # folder_path = data.get('folder_path')
     if not folder_path:
         return jsonify({"error": "No se proporcionó la ruta de la carpeta"}), 400
     
+    project = data.get('project_id', get_user_identifier(user.id))
+    print("project: ", project)
+
     print(folder_path, ": esta es la ruta de la carpeta")
     # Generar la ruta completa donde se encuentra la carpeta del usuario
-    full_folder_path = os.path.join(store_path + str(get_user_identifier(user.id)) +'/'+ folder_path)
+    full_folder_path = os.path.join(store_path + str(get_user_identifier(user.id)) )
     
     print("full: ",full_folder_path)
     
     
     # Verificar si la carpeta existe
-    if not os.path.exists(full_folder_path):
-        return jsonify({"error": "La carpeta no existe"}), 404
+    # if not os.path.exists(full_folder_path):
+    #     return jsonify({"error": "La carpeta no existe"}), 404
 
     try:
-        # Definir el directorio donde se guardarán los archivos ZIP
+        
+        download_path_openstack(get_user_identifier(user.id), user.openstack_id, project, folder_path, full_folder_path)
+        # # Definir el directorio donde se guardarán los archivos ZIP
+        
+        print("entrara a la compresion de los archivos")
         zip_dir = zip_path  # Usar la variable `zip_path` donde se guardarán los ZIP
 
+
+        print("zip_dir: ", zip_dir)
         # Crear el directorio si no existe
         if not os.path.exists(zip_dir):
+            print("no existe y se creara")
             os.makedirs(zip_dir)
 
-        # Generar un nombre único para el archivo ZIP para evitar colisiones
+        print("folder_path: ", folder_path)
+        folder_path = os.path.normpath(folder_path)
+        print("full_folder_path: ", full_folder_path)
+        full_file_path = os.path.normpath(full_folder_path)
+        folder_path = folder_path.lstrip("/\\")  # Eliminar cualquier barra inicial
+        full_file_path = os.path.join(full_folder_path, folder_path)
+        
+        print("full_file_path: ", full_file_path)
+        full_file_path = os.path.normpath(full_file_path)  # Normaliza la ruta según el sistema operativo
+        # Verificar si la carpeta existe
+        if not os.path.exists(full_file_path):
+            return jsonify({"error": "La carpeta no existe"}), 404
+        
+        # # Generar un nombre único para el archivo ZIP para evitar colisiones
         zip_filename = f"{os.path.basename(full_folder_path)}_{uuid.uuid4().hex}.zip"
         zip_filepath = os.path.join(zip_dir, zip_filename)
         
         # Crear el archivo ZIP en el almacenamiento local
         with zipfile.ZipFile(zip_filepath, 'w', zipfile.ZIP_DEFLATED) as zf:
-            total_files = sum([len(files) for _, _, files in os.walk(full_folder_path)])
+            total_files = len([f for f in os.listdir(full_file_path) if os.path.isfile(os.path.join(full_file_path, f))])  # Solo archivos
             processed_files = 0
-            
-            # Recorrer todos los archivos dentro de la carpeta y agregarlos al ZIP
-            for root, dirs, files in os.walk(full_folder_path):
-                for file in files:
-                    full_file_path = os.path.join(root, file)
-                    arcname = os.path.relpath(full_file_path, full_folder_path)
+
+            print(f"Total archivos a comprimir: {total_files}")
+            print(os.listdir(full_file_path))
+            # Recorrer solo los archivos dentro de la carpeta, no subdirectorios
+            for file in os.listdir(full_file_path):
+                full_file_path = os.path.join(full_file_path, file)
+
+                # Verificar si es un archivo (no un subdirectorio)
+                if os.path.isfile(full_file_path):
+                    print(f"Agregando archivo: {full_file_path}")
+                    arcname = os.path.relpath(full_file_path, full_folder_path)  # Nombre relativo
                     zf.write(full_file_path, arcname)
 
                     # Actualizar el progreso en la consola
                     processed_files += 1
                     progress = (processed_files / total_files) * 100
-                    #print(f"Progreso: {progress:.2f}% ({processed_files}/{total_files} archivos)")
+                    print(f"Progreso: {progress:.2f}% ({processed_files}/{total_files} archivos)")
 
         # Programar la eliminación del archivo ZIP en un hilo separado con retraso
         @after_this_request
@@ -348,7 +388,7 @@ def download_folder():
 
         # Enviar el archivo ZIP generado al cliente desde el disco
         return send_file(zip_filepath, as_attachment=True, download_name=os.path.basename(zip_filepath))
-
+        # return jsonify({"message": "Carpeta descargada exitosamente"}), 200
     except Exception as e:
         return jsonify({"error": f"Error al comprimir la carpeta: {str(e)}"}), 500
     

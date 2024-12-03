@@ -1,6 +1,9 @@
+import json
 import os
 from flask import Blueprint,request, jsonify
 from pathlib import Path
+
+from app.openstack.object import get_object_list_by_path
 from .auth import openstack_auth_id
 import requests
 
@@ -110,3 +113,62 @@ def download_file_openstack(user, user_scope, project, file_path, file_name, sav
         return jsonify({"message": f"Archivo '{file_name}' descargado exitosamente en '{local_file_path}'."}), 200
     else:
         raise Exception(f"Error al descargar el archivo: {response.status_code} - {response.text}")
+    
+    # Descargar archivos de un directorio virtual dentro de un contenedor de OpenStack
+def download_path_openstack(user, user_scope, project, file_path, save_directory):
+    try:
+        # Obtener el token de autenticación de OpenStack
+        token = openstack_auth_id(user, project)
+
+        # Obtener la lista de archivos en un directorio
+        objects = get_object_list_by_path(user, project, file_path)
+        # objects = objects.get('data', [])
+        
+        if not objects:
+            raise Exception("No se encontraron archivos en el directorio especificado.")
+        # print("objects", objects)
+        #imprimir con formato json
+        print(json.dumps(objects, indent=4))
+        # Iterar sobre los archivos y descargarlos
+        for obj in objects:
+            file_name = obj['name'].lstrip("/\\")
+            if file_name.endswith("/"):
+                continue
+            url = f"http://192.168.1.104:8080/v1/{user_scope}/{user}//{file_name}"
+            print('\nurl: ',url)
+
+            headers = {'X-Auth-Token': token}
+
+            # Solicitar el archivo al servidor
+            response = requests.get(url, headers=headers, stream=True)
+            if response.status_code == 200:
+                # Crear directorios locales según sea necesario
+                save_directory = os.path.normpath(save_directory)
+                file_name = os.path.normpath(file_name)
+                
+                print("save_directory", save_directory)
+                print("file_name", file_name)
+
+                # common_path = os.path.commonpath([save_directory, file_name])
+                
+                # print("common_path", common_path)
+
+                #obtener nombre del archivo
+                # file_name = os.path.basename(file_name)
+
+                print("file_name", file_name)
+
+                local_file_path = os.path.join(save_directory, file_name)
+                local_file_path = os.path.normpath(local_file_path)
+                os.makedirs(os.path.dirname(local_file_path), exist_ok=True)
+                print(f"Guardando archivo en: {local_file_path}\n")   
+                # Guardar el archivo
+                with open(local_file_path, 'wb') as file:
+                    for chunk in response.iter_content(chunk_size=8192):
+                        file.write(chunk)
+
+                print(f"Archivo '{file_name}' descargado exitosamente en '{local_file_path}'.")
+            else:
+                print(f"Error al descargar '{file_name}': {response.status_code} - {response.text}")
+    except Exception as e:
+        print(f"Error en el proceso de descarga: {e}")
