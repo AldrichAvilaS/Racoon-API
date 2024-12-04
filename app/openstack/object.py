@@ -141,3 +141,70 @@ def move_data(user, user_scope, project, file_path, file_name, new_path):
         print(f"Objeto '{file_name}' subido exitosamente a '{user}'.")
         return jsonify({"message": f"Objeto '{file_name}' subido exitosamente a '{user}'."}), 201
     
+def move_path_to_path(user, user_scope, project, source_path, new_path):
+    token = openstack_auth_id(str(user), project)
+    print(token)
+    # print("full_path_recibido", full_path)
+    print("source_path", source_path)
+    print("new_path", new_path)
+    
+
+    # url = f"192.168.1.104:5000/v1/{user}/{object_name}"
+# Obtener la lista de archivos en un directorio
+    objects = get_object_list_by_path(user, project, source_path)
+    # objects = objects.get('data', [])
+    
+    if not objects:
+        raise Exception("No se encontraron archivos en el directorio especificado.")
+    
+    # print("objects", objects)
+    #imprimir con formato json
+    print(json.dumps(objects, indent=4))
+    # Iterar sobre los archivos y descargarlos
+    for obj in objects:
+
+        file_name = obj['name'].lstrip("/\\")
+
+        url = f"http://192.168.1.104:8080/v1/{user_scope}/{user}//{file_name}"
+        print('\nurl: ',url)
+
+        # Extraer nombre del archivo
+        nombre_archivo = os.path.basename(file_name)
+
+        # Generar la nueva ruta
+        directorio_generado = os.path.join(new_path, nombre_archivo)
+        directorio_generado = directorio_generado.replace("\\", "/")
+        print("directorio_generado",directorio_generado)
+        # file_name = file_path + '/' + file_name
+        print("file_name updated",file_name)
+
+        headers = {
+        'X-Auth-Token': token,
+        'Destination': f'/{user}/{directorio_generado}'  # Nuevo nombre del objeto dentro del contenedor
+        }
+        # Realizar la solicitud COPY
+        response = requests.request('COPY', url, headers=headers)
+        # response = requests.get(url, headers=headers)
+        print("response: ",response)
+        # url = f"http://192.168.1.104:8080/v1/{user_scope}/{user}{file_path}"
+        headers = {
+            'X-Auth-Token': token,
+        } 
+        response2 = requests.delete(url, headers=headers)
+        print("response2: ",response2)  
+        # Solicitar el archivo al servidor
+        response = requests.delete(url, headers=headers, stream=True)
+        print(response.status_code)
+        if response.status_code == 200 or response.status_code == 204:
+            print(f"Archivo '{file_name}' eliminado exitosamente")
+        else:
+            print(f"Error al eliminar '{file_name}': {response.status_code} - {response.text}")
+    
+    # response = requests.get(url, headers=headers)
+    print("response: ",response)
+    if response.status_code not in [201, 202, 204]:
+        print(response.text)
+        raise Exception(f"Error al subir el objeto: {response.status_code} - {response.text}")
+    else:
+        print(f"Objeto '{file_name}' subido exitosamente a '{user}'.")
+        return jsonify({"message": f"Objeto '{file_name}' subido exitosamente a '{user}'."}), 201

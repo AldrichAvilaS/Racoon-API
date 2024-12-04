@@ -50,6 +50,23 @@ def get_role_name_by_value(role_value):
 #ruta del endpoint | metodo http | funcion a ejecutar | json que recibe | variables que regresa | codigo de respuesta
 #http://localhost:5000/users/ | POST | add_user | {username, email, password, role_id} | message, error | 201, 400, 500
 # Registrar un nuevo usuario
+# entrada:
+# {
+#    "username": "admin",
+#    "email": "example@gmail.com",
+#    "password": "root",
+#    "role_id": 0
+# }
+# salida:
+# {message: "Usuario creado con éxito"} | 201
+# {error: "Datos incompletos"} | 400
+# {error: "El rol con ID {role_id} no existe."} | 400
+# {error: "El campo 'boleta' es obligatorio para estudiantes."} | 400
+# {error: "El campo 'rfc' es obligatorio para profesores."} | 400
+# {error: "El nombre de usuario o email ya está en uso."} | 400
+# {error: "Error al crear el usuario."} | 500
+# {error: str(e)} | 500
+
 @users_bp.route('/', methods=['POST'])
 @jwt_required()
 #@role_required(0, 1, 2)  # Solo Administrador (0) o Academia (1)
@@ -297,6 +314,12 @@ def delete_user(identifier):
 #ruta del endpoint | metodo http | funcion a ejecutar | json que recibe | variables que regresa | codigo de respuesta
 #http://localhost:5000/users/info | GET | info_user | No requiere datos | user_info | 200
 # Obtener los datos públicos del usuario autenticado
+# entrada:
+# No requiere
+# salida:
+# {username, email, role} | 200
+# {error: "Usuario no encontrado"} | 404
+
 @users_bp.route('/info', methods=['GET'])
 @jwt_required()
 def info_user():

@@ -115,6 +115,8 @@ def download_file_openstack(user, user_scope, project, file_path, file_name, sav
         raise Exception(f"Error al descargar el archivo: {response.status_code} - {response.text}")
     
     # Descargar archivos de un directorio virtual dentro de un contenedor de OpenStack
+
+#descargar archivos de un directorio virtual dentro de un contenedor de OpenStack
 def download_path_openstack(user, user_scope, project, file_path, save_directory):
     try:
         # Obtener el token de autenticación de OpenStack
@@ -172,3 +174,37 @@ def download_path_openstack(user, user_scope, project, file_path, save_directory
                 print(f"Error al descargar '{file_name}': {response.status_code} - {response.text}")
     except Exception as e:
         print(f"Error en el proceso de descarga: {e}")
+
+#Eliminar carpeta y su contenido de un contenedor en openstack 
+def delete_path_openstack(user, user_scope, project, file_path):
+    try:
+        # Obtener el token de autenticación de OpenStack
+        token = openstack_auth_id(user, project)
+
+        # Obtener la lista de archivos en un directorio
+        objects = get_object_list_by_path(user, project, file_path)
+        # objects = objects.get('data', [])
+        
+        if not objects:
+            raise Exception("No se encontraron archivos en el directorio especificado.")
+        # print("objects", objects)
+        #imprimir con formato json
+        print(json.dumps(objects, indent=4))
+        # Iterar sobre los archivos y descargarlos
+        for obj in objects:
+            file_name = obj['name'].lstrip("/\\")
+            url = f"http://192.168.1.104:8080/v1/{user_scope}/{user}//{file_name}"
+            print('\nurl: ',url)
+
+            headers = {'X-Auth-Token': token}
+
+            # Solicitar el archivo al servidor
+            response = requests.delete(url, headers=headers, stream=True)
+            print(response.status_code)
+            if response.status_code == 200 or response.status_code == 204:
+
+                print(f"Archivo '{file_name}' eliminado exitosamente")
+            else:
+                print(f"Error al eliminar '{file_name}': {response.status_code} - {response.text}")
+    except Exception as e:
+        print(f"Error en el proceso de eliminacion: {e}")

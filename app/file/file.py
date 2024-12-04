@@ -12,8 +12,8 @@ from ..db.db import User
 from ..db.path import store_path, zip_path
 from ..logs.logs import log_api_request
 from .path_functions import *
-from ..openstack.load import download_file_openstack, download_path_openstack, upload_file_openstack
-from ..openstack.object import get_object_list, delete, move_data
+from ..openstack.load import delete_path_openstack, download_file_openstack, download_path_openstack, upload_file_openstack
+from ..openstack.object import get_object_list, delete, move_data, move_path_to_path
 from ..openstack.conteners import create_path
 
 file_bp = Blueprint('file', __name__)
@@ -22,6 +22,22 @@ file_bp = Blueprint('file', __name__)
 MAX_FILE_SIZE = 500 * 1024 * 1024  # 500 MB
 
 # Ruta para recibir un solo archivo
+#ejemplo de entrada y salida
+#entrada 
+# {
+# 	"file": "base64",
+# 	"filename": "nombre del archivo",
+# 	"path": "ruta del archivo",
+# 	"project_id": "id del proyecto"
+# }
+#salida
+# "message": "Archivo cargado correctamente"
+# "message": "Archivo demasiado grande"
+# "error": "Datos incompletos"
+# "error": "Error al decodificar el archivo base64"
+# "error": "Error de sistema: {str(e)}"
+# "error": str(e)
+
 @file_bp.route('/upload/single', methods=['POST'])
 @jwt_required()  # Proteger con JWT
 def upload_file():
@@ -141,6 +157,20 @@ def upload_file_chunk():
         return jsonify({"error": str(e)}), 500
 
 # Ruta para descargar un archivo
+#ejemplo de entrada y salida
+# entrada
+# {
+# 	"token": "token del usuario",
+# 	"file_path": "ruta del archivo",
+# 	"flag": "bandera de proyecto"
+# }
+# salida
+# "message": "Estructura obtenida correctamente"
+# "error": "El archivo no existe"
+# "error": "Error interno del servidor"
+# "error": str(ve)
+# "error": "No se proporcionó la ruta del archivo"
+# "error": "Usuario no autenticado"
 @file_bp.route('/download', methods=['GET'])
 @jwt_required()
 def download_file():
@@ -179,15 +209,32 @@ def download_file():
         return jsonify({"error": "Error interno del servidor"}), 500
 
 # Ruta para eliminar un archivo o carpeta
+#ejemplo de entrada y salida
+# entrada
+# {
+# 	"token": "token del usuario",
+# 	"target_path": "ruta del archivo o carpeta",
+# 	"project_id": "id del proyecto"
+# }
+# salida
+# "message": "'{target_path}' eliminado exitosamente"
+# "error": "No se proporcionó la ruta del archivo o carpeta a eliminar"
+# "error": str(ve)
+# "error": "Error interno del servidor"
+# "error": "Usuario no autenticado"
+
 @file_bp.route('/delete', methods=['POST'])
 @jwt_required()
 def delete_file_or_folder():
+
     user = get_current_user()
     if not user:
         return jsonify({"error": "Usuario no autenticado"}), 401
+    
     user_identifier = get_user_identifier(user.id)
     data = request.get_json()
     target_path = data.get('target_path')
+
     if data.get('project_id') is not None: 
         project_id = data.get('project_id') 
     else: 
@@ -201,7 +248,13 @@ def delete_file_or_folder():
         print("intentar eliminar")
         print("target_path: ", target_path)
         print("project_id: ", project_id)
-        delete(user_identifier, user.openstack_id, project_id, target_path, target_path)
+
+        #si el target_path es un archivo
+        if target_path.count("/") == 0:
+            delete(user_identifier, user.openstack_id, project_id, target_path, target_path)
+        else:
+            delete_path_openstack(user_identifier, user.openstack_id, project_id, target_path)
+        
 
         log_api_request(get_jwt_identity(), "Eliminación exitosa", "delete", target_path, 200)
         return jsonify({"message": f"'{target_path}' eliminado exitosamente"}), 200
@@ -267,6 +320,20 @@ def list_files_and_folders_single():
         return jsonify({"error": str(e)}), 500
 
 # Ruta para crear una nueva carpeta
+#ejemplo de entrada y salida
+# entrada
+# {
+# 	"token": "token del usuario",
+# 	"folder_name": "nombre de la carpeta",
+# 	"parent_dir": "ruta de la carpeta padre",
+# 	"project_id": "id del proyecto"
+# }
+# salida
+# "message": "Carpeta '{folder_name}' creada exitosamente"
+# "error": "No se proporcionó el nombre de la carpeta"
+# "error": str(ve)
+# "error": "Error interno del servidor"
+
 @file_bp.route('/create-folder', methods=['POST'])
 @jwt_required()
 def create_folder():
@@ -295,105 +362,125 @@ def create_folder():
 #--------------------------------------------------------------************--------------------------------------------------------------#
 
 # Ruta para descargar una carpeta como ZIP
+#ejemplo de entrada y salida
+# entrada
+# {
+# 	"token":
+# 	"folder_path": "ruta de la carpeta",
+# 	"project_id": "id del proyecto"
+# }
+# salida
+# "message": "Carpeta descargada exitosamente"
+# "error": "No se proporcionó la ruta de la carpeta"
+# "error": "La carpeta no existe"
+# "error": f"Error al comprimir la carpeta: {str(e)}"
+# "error": "Usuario no autenticado"
+
 @file_bp.route('/download-folder', methods=['POST'])
 @jwt_required()  # Proteger con JWT
 def download_folder():
+    print("Iniciando el proceso de descarga de carpeta...")  # Depuración inicial
+    
     user = get_current_user()
     if not user:
+        print("Error: Usuario no autenticado")  # Depuración de autenticación
         return jsonify({"error": "Usuario no autenticado"}), 401
     
     data = request.get_json()
+    print(f"Datos recibidos: {data}")  # Depuración de los datos recibidos
 
-    #recibir la ruta por url
-    folder_path = '/'+data['folder_path']
-    print("folder_path: ", folder_path)
-    # Recibir la ruta de la carpeta que se desea comprimir
-    # folder_path = data.get('folder_path')
+    # Recibir la ruta por URL
+    folder_path = '/' + data['folder_path']
+    print("Ruta proporcionada por el cliente:", folder_path)  # Depuración de ruta
+    
     if not folder_path:
+        print("Error: No se proporcionó la ruta de la carpeta")  # Depuración de validación de ruta
         return jsonify({"error": "No se proporcionó la ruta de la carpeta"}), 400
     
     project = data.get('project_id', get_user_identifier(user.id))
-    print("project: ", project)
+    print("Proyecto identificado:", project)  # Depuración de project_id
 
-    print(folder_path, ": esta es la ruta de la carpeta")
-    # Generar la ruta completa donde se encuentra la carpeta del usuario
-    full_folder_path = os.path.join(store_path + str(get_user_identifier(user.id)) )
+    full_folder_path = os.path.join(store_path + str(get_user_identifier(user.id)))
+    print("Ruta completa de la carpeta del usuario:", full_folder_path)  # Depuración de ruta completa
     
-    print("full: ",full_folder_path)
-    
-    
-    # Verificar si la carpeta existe
-    # if not os.path.exists(full_folder_path):
-    #     return jsonify({"error": "La carpeta no existe"}), 404
-
     try:
-        
+        print("Iniciando descarga desde OpenStack...")  # Depuración del inicio de descarga
         download_path_openstack(get_user_identifier(user.id), user.openstack_id, project, folder_path, full_folder_path)
-        # # Definir el directorio donde se guardarán los archivos ZIP
         
-        print("entrara a la compresion de los archivos")
-        zip_dir = zip_path  # Usar la variable `zip_path` donde se guardarán los ZIP
+        zip_dir = zip_path
+        print("Directorio para ZIP definido:", zip_dir)  # Depuración de directorio ZIP
 
-
-        print("zip_dir: ", zip_dir)
-        # Crear el directorio si no existe
         if not os.path.exists(zip_dir):
-            print("no existe y se creara")
+            print("El directorio ZIP no existe, creando:", zip_dir)  # Depuración de creación de directorio
             os.makedirs(zip_dir)
 
-        print("folder_path: ", folder_path)
         folder_path = os.path.normpath(folder_path)
-        print("full_folder_path: ", full_folder_path)
-        full_file_path = os.path.normpath(full_folder_path)
-        folder_path = folder_path.lstrip("/\\")  # Eliminar cualquier barra inicial
-        full_file_path = os.path.join(full_folder_path, folder_path)
+        full_file_path = os.path.join(full_folder_path, folder_path.lstrip("/\\"))
+        full_file_path = os.path.normpath(full_file_path)
+        print("Ruta normalizada de la carpeta a comprimir:", full_file_path)  # Depuración de ruta final
         
-        print("full_file_path: ", full_file_path)
-        full_file_path = os.path.normpath(full_file_path)  # Normaliza la ruta según el sistema operativo
-        # Verificar si la carpeta existe
         if not os.path.exists(full_file_path):
+            print(f"Error: La carpeta no existe en {full_file_path}")  # Depuración de existencia
             return jsonify({"error": "La carpeta no existe"}), 404
-        
-        # # Generar un nombre único para el archivo ZIP para evitar colisiones
+
         zip_filename = f"{os.path.basename(full_folder_path)}_{uuid.uuid4().hex}.zip"
         zip_filepath = os.path.join(zip_dir, zip_filename)
-        
-        # Crear el archivo ZIP en el almacenamiento local
+        print("Ruta del archivo ZIP a generar:", zip_filepath)  # Depuración de nombre ZIP
+
         with zipfile.ZipFile(zip_filepath, 'w', zipfile.ZIP_DEFLATED) as zf:
-            total_files = len([f for f in os.listdir(full_file_path) if os.path.isfile(os.path.join(full_file_path, f))])  # Solo archivos
             processed_files = 0
+            total_files = 0
 
-            print(f"Total archivos a comprimir: {total_files}")
-            print(os.listdir(full_file_path))
-            # Recorrer solo los archivos dentro de la carpeta, no subdirectorios
-            for file in os.listdir(full_file_path):
-                full_file_path = os.path.join(full_file_path, file)
+            # Usar os.walk para recorrer recursivamente
+            for root, dirs, files in os.walk(full_file_path):
+                for file in files:
+                    total_files += 1
 
-                # Verificar si es un archivo (no un subdirectorio)
-                if os.path.isfile(full_file_path):
-                    print(f"Agregando archivo: {full_file_path}")
-                    arcname = os.path.relpath(full_file_path, full_folder_path)  # Nombre relativo
-                    zf.write(full_file_path, arcname)
+            print(f"Archivos totales a comprimir: {total_files}")  # Depuración del conteo de archivos
 
-                    # Actualizar el progreso en la consola
+            # Agregar archivos al ZIP
+            for root, dirs, files in os.walk(full_file_path):
+                for file in files:
+                    file_path = os.path.join(root, file)
+                    arcname = os.path.relpath(file_path, full_folder_path)  # Ruta relativa dentro del ZIP
+                    print(f"Agregando archivo al ZIP: {file_path} como {arcname}")  # Depuración del archivo agregado
+                    zf.write(file_path, arcname)
+
+                    # Actualizar progreso
                     processed_files += 1
                     progress = (processed_files / total_files) * 100
-                    print(f"Progreso: {progress:.2f}% ({processed_files}/{total_files} archivos)")
+                    print(f"Progreso de compresión: {progress:.2f}% ({processed_files}/{total_files})")
 
-        # Programar la eliminación del archivo ZIP en un hilo separado con retraso
         @after_this_request
         def schedule_file_deletion(response):
-            threading.Thread(target=delayed_file_deletion, args=(zip_filepath, 60)).start()  # 5 segundos de retraso
+            print(f"Programando eliminación del archivo ZIP: {zip_filepath}")  # Depuración de eliminación
+            threading.Thread(target=delayed_file_deletion, args=(zip_filepath, 60)).start()
             return response
 
-        # Enviar el archivo ZIP generado al cliente desde el disco
+        print("Enviando archivo ZIP al cliente...")  # Depuración de envío
         return send_file(zip_filepath, as_attachment=True, download_name=os.path.basename(zip_filepath))
-        # return jsonify({"message": "Carpeta descargada exitosamente"}), 200
+
     except Exception as e:
+        print(f"Error al procesar la carpeta: {str(e)}")  # Depuración de errores
         return jsonify({"error": f"Error al comprimir la carpeta: {str(e)}"}), 500
-    
+
 
 # Ruta para mover archivos o carpetas
+#ejemplo de entrada y salida
+# entrada
+# {
+# 	"token": "token del usuario",
+# 	"source_path": "ruta del archivo o carpeta de origen",
+# 	"destination_path": "ruta de destino",
+# 	"project_id": "id del proyecto"
+# }
+# salida
+# "message": "'{source_path}' movido exitosamente a '{destination_path}'"
+# "error": "No se proporcionaron las rutas de origen o destino"
+# "error": str(ve)
+# "error": "Error interno del servidor"
+# "error": "Usuario no autenticado"
+
 @file_bp.route('/move', methods=['POST'])
 @jwt_required()
 def move_file_or_folder():
@@ -420,22 +507,15 @@ def move_file_or_folder():
         else:
             project = data.get('project_id')
         print("user identifier: ", get_user_identifier(user.id))
-        move_data(get_user_identifier(user.id), user_scope, project, source_path, file_name, destination_path)
-       # user_directory = get_user_directory(get_user_identifier(user.id))
-        # print("secure de full_source_path: ")
-        # full_source_path = secure_path(user_directory, source_path)
-        # print("secure de full_destination_path: ")
-        # full_destination_path = secure_path(user_directory, destination_path)
 
-        # if not os.path.exists(full_source_path):
-        #     return jsonify({"error": "El archivo o carpeta de origen no existe"}), 404
-
-        # # Crear el directorio de destino si no existe
-        # os.makedirs(os.path.dirname(full_destination_path), exist_ok=True)
-        # # Mover el archivo o carpeta
-        # shutil.move(full_source_path, full_destination_path)
-
-        # log_api_request(get_jwt_identity(), "Movimiento exitoso", "move", source_path, 200)
+        #si no tiene una extension es un directorio
+        if "." in file_name:
+            print("es un archivo el que se mueve")
+            move_data(get_user_identifier(user.id), user_scope, project, source_path, file_name, destination_path)
+        else:
+            print("es un directorio el que se mueve")
+            move_path_to_path(get_user_identifier(user.id), user_scope, project, source_path, destination_path)
+            
         return jsonify({"message": f"'{source_path}' movido exitosamente a '{destination_path}'"}), 200
 
     except ValueError as ve:
