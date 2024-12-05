@@ -79,16 +79,19 @@ def size_container(user, user_scope, project):
     #metodo head en el request para obtener el tamaño del contenedor
     response = requests.get(url, headers=headers)
     #obtener Content-Length del header
-    size = response.headers.get('X-Container-Bytes-Used')
-    #Bytes to MB
-    size = int(size) / 1024 / 1024
-    print("Tamaño del contenedor:", size)
+    try:
+        size = response.headers.get('X-Container-Bytes-Used')
+        #Bytes to MB
+        size = int(size) / 1024 / 1024
+        print("Tamaño del contenedor:", size)
 
-    if response.status_code not in [200, 201, 202, 204]:
-        print("Error al obtener el tamaño del contenedor")
-    else:
-        return size
-    
+        if response.status_code not in [200, 201, 202, 204]:
+            print("Error al obtener el tamaño del contenedor")
+        else:
+            return size
+    except Exception as e:
+        print("Error al obtener el tamaño del contenedor:", e)
+        return 0    
 
 
 

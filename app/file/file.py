@@ -191,29 +191,33 @@ def download_file():
     user = get_current_user()
     if not user:
         return jsonify({"error": "Usuario no autenticado"}), 401
+    
     data = request.get_json()
+    print("data: ", data)
     file_path = data['file_path']
 
     print("file_path: ", file_path)
     if not file_path:
         return jsonify({"error": "No se proporcionó la ruta del archivo"}), 400
     
-    print(data['project_id'])
-    if data['project_id'] is not None:
-        project_id = data['project_id']
+    project_id = data.get('project_id', get_user_identifier(user.id))
+    #print(data['project_id'])
+    if project_id != get_user_identifier(user.id):
+        print("si hay proyecto a donde apuntar project_id")
         scope = Subject.query.filter_by(subject_name=project_id).first()
         scope = scope.swift_scope
     else:
+        print("no hay proyecto a donde apuntar project_id por lo que sera el del usuarios")
         scope = user.openstack_id
     print("scope: ", scope)
     try:
         user_directory = get_user_directory(get_user_identifier(user.id))
         print("user_directory: ", user_directory)
-        full_file_path = secure_path(user_directory, file_path)
+        full_file_path = secure_path(user_directory, '/'+file_path)
         print("full_file_path: ", full_file_path)
         
         #mandar a descargar el archivo desde openstack
-        if not data['project_id']:
+        if project_id == get_user_identifier(user.id):
             print("no project_id")
             download_file_openstack(get_user_identifier(user.id), scope, get_user_identifier(user.id), file_path, file_path, user_directory)
         else:
@@ -281,10 +285,12 @@ def delete_file_or_folder():
         else:
             scope = user.openstack_id
 
-        #si el target_path es un archivo
-        if target_path.count("/") == 0:
+        #si el target_path es un archivo si tiene extension
+        if target_path.find(".") != -1:
+            print("es un archivo")
             delete(user_identifier, scope, project_id, target_path, target_path)
         else:
+            print("es una carpeta")
             delete_path_openstack(user_identifier, scope, project_id, target_path)
         
 
@@ -626,7 +632,7 @@ def get_space():
         return jsonify({"error": "Usuario no autenticado"}), 401
 
     user_identifier = get_user_identifier(user.id)
-    user_directory = get_user_directory(user_identifier)
+    # user_directory = get_user_directory(user_identifier)
     size = size_container(user_identifier, user.openstack_id, user_identifier)
     total_size = user.storage_limit
     #pasar de gb a mb

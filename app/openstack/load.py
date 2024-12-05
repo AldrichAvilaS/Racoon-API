@@ -63,6 +63,7 @@ def download_file_openstack(user, user_scope, project, file_path, file_name, sav
     print(f"Descargando archivo: {file_name}")
     print("file_path", file_path)
     print("file_name", file_name)
+
     # Asegurarte de limpiar barras iniciales en file_name
     #saber si un file_name tiene una barra al inicio
     
@@ -70,11 +71,12 @@ def download_file_openstack(user, user_scope, project, file_path, file_name, sav
     count_slashes = file_name.count("/") + file_name.count("\\")
 
     # URL de descarga del archivo desde OpenStack Swift
-    #si file name tiene extension
-    if file_name.find(".") != -1:
+    #si file name empieza con una barra
+    if count_slashes > 1:
+        file_name = '/' + file_name
         url = f"http://192.168.1.104:8080/v1/{user_scope}/{user}/{file_name}"
     else:
-        url = f"http://192.168.1.104:8080/v1/{user_scope}/{user}{file_name}"
+        url = f"http://192.168.1.104:8080/v1/{user_scope}/{user}/{file_name}"
     print(url)
 
     headers = {
@@ -96,7 +98,7 @@ def download_file_openstack(user, user_scope, project, file_path, file_name, sav
 
         print("save_directory", save_directory)
           # Normalizar la ruta para asegurar el formato correcto del sistema operativo
-        local_file_path = os.path.join(save_directory, file_name)
+        local_file_path = os.path.join(save_directory, file_name + '/')
         local_file_path = os.path.normpath(local_file_path)  # Normaliza la ruta según el sistema operativo
         only_path = os.path.dirname(local_file_path)
         os.makedirs(only_path, exist_ok=True)

@@ -166,6 +166,33 @@ def insert_default_data():
         db.session.commit()
         print("Usuario administrador por defecto creado")
 
+    if Teacher.query.count() == 0:
+        admin_user = User(
+            username='admin',
+            email='admin@example.com',
+            password=generate_password_hash('root'),
+            role_id=Role.query.filter_by(name='Profesor').first().role_id,
+            openstack_id='00000000000000000000000000000000'
+        )
+        db.session.add(admin_user)
+        db.session.commit()
+        teach_default= Teacher(
+            user_id=admin_user.id,
+            rfc='XXXX000000XX0'
+        )
+        db.session.add(teach_default)
+        db.session.commit()
+        print("Usuario administrador por defecto creado")
+    if Semester.query.count() == 0:
+        current_semester = Semester(
+            semester = '2025-01',
+            created_at = '2025-01-01 00:00:00',
+            finished_at = '2025-06-30 23:59:59'
+        )
+        db.session.add_all(current_semester)
+        db.session.commit()
+        print("Semestres por defecto creados")
+
 def init_db(app):
     db.init_app(app)
     with app.app_context():
