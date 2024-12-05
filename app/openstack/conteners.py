@@ -63,6 +63,35 @@ def assigment_role(user_id, project_id, role):
         print("Error en la petición:", err)
     return response.json()
 
+#obtener tamaño del contenedor en openstack
+def size_container(user, user_scope, project):
+    token = openstack_auth_id(str(user), project)
+    if token:
+        print("Token de autenticación obtenido:")
+
+    print(project)
+
+    url = f"http://192.168.1.104:8080/v1/{user_scope}/{user}/"
+    print(url)
+    headers = {
+        'X-Auth-Token': token,
+    }
+    #metodo head en el request para obtener el tamaño del contenedor
+    response = requests.get(url, headers=headers)
+    #obtener Content-Length del header
+    size = response.headers.get('X-Container-Bytes-Used')
+    #Bytes to MB
+    size = int(size) / 1024 / 1024
+    print("Tamaño del contenedor:", size)
+
+    if response.status_code not in [200, 201, 202, 204]:
+        print("Error al obtener el tamaño del contenedor")
+    else:
+        return size
+    
+
+
+
 #crear carpeta virtual en openstack
 def create_path(user, user_scope, project, full_path, path_name):
     token = openstack_auth_id(str(user), project)

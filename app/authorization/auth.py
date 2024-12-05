@@ -1,6 +1,8 @@
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
 from werkzeug.security import check_password_hash
+
+from app.openstack.conteners import size_container
 from ..db.db import User, Student, Teacher, Academy
 from datetime import timedelta
 import re
@@ -105,16 +107,27 @@ def login():
     if user is None or not check_password_hash(user.password, password):
         return jsonify({"error": "Credenciales inválidas"}), 401
 
+
     # Generar el token JWT usando el identificador especializado
     access_token = create_access_token(identity=identifier, expires_delta=timedelta(days=2))
     print("identicador", identifier)
+
+
+
     if user_type != 'academy':
+        size = size_container(identifier, user.openstack_id, identifier)
+        print("size", size)
+        storage_limit = user.storage_limit
+        #pasarlo a mb por estar en gb
+        storage_limit = storage_limit * 1024
         return jsonify({
             "message": "Inicio de sesión exitoso",
             "access_token": access_token,
             "active": user.active,
             "user_type": get_user_role_value(user),
-            "user_id": identifier  # Enviamos el identificador especializado
+            "user_id": identifier,  # Enviamos el identificador especializado
+            "size": size,
+            "free_space": storage_limit - size
         }), 200
     else:
         return jsonify({
@@ -122,7 +135,7 @@ def login():
             "access_token": access_token,
             "active": True,
             "user_type": 1,
-            "user_id": identifier  # Enviamos el identificador especializado
+            "user_id": identifier,
         }), 200
 
 

@@ -69,11 +69,9 @@ def download_file_openstack(user, user_scope, project, file_path, file_name, sav
     # Contar las barras diagonales (considerando ambas / y \)
     count_slashes = file_name.count("/") + file_name.count("\\")
 
-    
-    print("file_name", file_name)
     # URL de descarga del archivo desde OpenStack Swift
-    if count_slashes > 2:
-
+    #si file name tiene extension
+    if file_name.find(".") != -1:
         url = f"http://192.168.1.104:8080/v1/{user_scope}/{user}/{file_name}"
     else:
         url = f"http://192.168.1.104:8080/v1/{user_scope}/{user}{file_name}"
@@ -85,7 +83,7 @@ def download_file_openstack(user, user_scope, project, file_path, file_name, sav
 
     # Realizar la solicitud GET para descargar el archivo
     response = requests.get(url, headers=headers, stream=True)
-
+    print(response.status_code)
     # Verificar el estado de la respuesta
     if response.status_code == 200:
         # Crear el directorio de destino si no existe

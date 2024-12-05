@@ -1,5 +1,6 @@
 # lógica de manejo de archivos
 # Versión 0.4 - Proporcionar directorios y rutas seguras
+import json
 import os, base64
 import shutil
 import threading
@@ -8,13 +9,13 @@ import zipfile
 from flask import Blueprint, after_this_request, request, jsonify, send_file, abort
 from pathlib import Path
 from flask_jwt_extended import get_jwt_identity, jwt_required
-from ..db.db import User 
+from ..db.db import Subject, User 
 from ..db.path import store_path, zip_path
 from ..logs.logs import log_api_request
 from .path_functions import *
 from ..openstack.load import delete_path_openstack, download_file_openstack, download_path_openstack, upload_file_openstack
 from ..openstack.object import get_object_list, delete, move_data, move_path_to_path
-from ..openstack.conteners import create_path
+from ..openstack.conteners import create_path, size_container
 
 file_bp = Blueprint('file', __name__)
 
@@ -89,11 +90,17 @@ def upload_file():
             file.write(file_bytes)
             print("si se escribio: ")
         
+        if data.get('project_id') is not None:
+            project_id = data.get('project_id')
+            scope = Subject.query.filter_by(subject_name=project_id).first()
+            scope = scope.swift_scope
+        else:
+            scope = user.openstack_id
 
-        upload_file_openstack(get_user_identifier(user.id), user.openstack_id, file_project, file_path , save_path, file_name)
+        upload_file_openstack(get_user_identifier(user.id), scope, file_project, file_path , save_path, file_name)
 
 
-        log_api_request(get_jwt_identity(), "Subida de archivo exitosa", file_path, file_name, 200)
+        # log_api_request(get_jwt_identity(), "Subida de archivo exitosa", file_path, file_name, 200)
         return jsonify({"message": "Archivo cargado correctamente"}), 200
     except base64.binascii.Error:
         return jsonify({"error": "Error al decodificar el archivo base64"}), 400
@@ -144,7 +151,14 @@ def upload_file_chunk():
             
             os.rename(temp_file_path, final_file_path)
             
-            upload_file_openstack(get_user_identifier(user.id), user.openstack_id, file_project, file_path , save_directory, file_name)
+            if request.headers.get('X-Project') is not None:
+                project_id = request.headers.get('X-Project')
+                scope = Subject.query.filter_by(subject_name=project_id).first()
+                scope = scope.swift_scope
+            else:
+                scope = user.openstack_id
+
+            upload_file_openstack(get_user_identifier(user.id), scope, file_project, file_path , save_directory, file_name)
 
             log_api_request(get_jwt_identity(), "Subida de archivo exitosa", file_path, file_name, 200)
             return jsonify({"message": "Archivo completo", "file_name": os.path.basename(final_file_path)}), 200
@@ -171,18 +185,27 @@ def upload_file_chunk():
 # "error": str(ve)
 # "error": "No se proporcionó la ruta del archivo"
 # "error": "Usuario no autenticado"
-@file_bp.route('/download', methods=['GET'])
+@file_bp.route('/download', methods=['POST'])
 @jwt_required()
 def download_file():
     user = get_current_user()
     if not user:
         return jsonify({"error": "Usuario no autenticado"}), 401
+    data = request.get_json()
+    file_path = data['file_path']
 
-    file_path = request.args.get('file_path')
     print("file_path: ", file_path)
     if not file_path:
         return jsonify({"error": "No se proporcionó la ruta del archivo"}), 400
-
+    
+    print(data['project_id'])
+    if data['project_id'] is not None:
+        project_id = data['project_id']
+        scope = Subject.query.filter_by(subject_name=project_id).first()
+        scope = scope.swift_scope
+    else:
+        scope = user.openstack_id
+    print("scope: ", scope)
     try:
         user_directory = get_user_directory(get_user_identifier(user.id))
         print("user_directory: ", user_directory)
@@ -190,10 +213,12 @@ def download_file():
         print("full_file_path: ", full_file_path)
         
         #mandar a descargar el archivo desde openstack
-        if not request.args.get('flag'):
-            download_file_openstack(get_user_identifier(user.id), user.openstack_id, get_user_identifier(user.id), file_path, file_path, user_directory)
-        else: 
-            download_file_openstack(get_user_identifier(user.id), user.openstack_id, request.args.get('project_id'), file_path, file_path, user_directory)
+        if not data['project_id']:
+            print("no project_id")
+            download_file_openstack(get_user_identifier(user.id), scope, get_user_identifier(user.id), file_path, file_path, user_directory)
+        else:
+            print("si project_id")
+            download_file_openstack(get_user_identifier(user.id), scope, project_id, file_path, file_path, user_directory)
         
         print("full_file_path en funcion: ", full_file_path)
         if not os.path.exists(full_file_path):
@@ -249,11 +274,18 @@ def delete_file_or_folder():
         print("target_path: ", target_path)
         print("project_id: ", project_id)
 
+        if data.get('project_id') is not None:
+            project_id = data.get('project_id')
+            scope = Subject.query.filter_by(subject_name=project_id).first()
+            scope = scope.swift_scope
+        else:
+            scope = user.openstack_id
+
         #si el target_path es un archivo
         if target_path.count("/") == 0:
-            delete(user_identifier, user.openstack_id, project_id, target_path, target_path)
+            delete(user_identifier, scope, project_id, target_path, target_path)
         else:
-            delete_path_openstack(user_identifier, user.openstack_id, project_id, target_path)
+            delete_path_openstack(user_identifier, scope, project_id, target_path)
         
 
         log_api_request(get_jwt_identity(), "Eliminación exitosa", "delete", target_path, 200)
@@ -268,15 +300,15 @@ def delete_file_or_folder():
 @file_bp.route('/full-list', methods=['GET'])
 @jwt_required()  # Protegido con JWT
 def list_files_and_folders():
-    print("entro a full-list")
+    # print("entro a full-list")
     user = get_current_user()
-    print("user: ", user)
+    # print("user: ", user)
     if not user:
-        print("no user")
+        # print("no user")
         return jsonify({"error": "Usuario no autenticado"}), 401
 
     user_identifier = get_user_identifier(user.id)
-    print("user_identifier: ", user_identifier)
+    # print("user_identifier: ", user_identifier)
     try:
         # Obtener la estructura de archivos y carpetas
         object_list = get_object_list(user_identifier, user_identifier)
@@ -293,7 +325,7 @@ def list_files_and_folders():
 def list_files_and_folders_single():
     data = request.get_json()
 
-    print("data: ", data)
+    # print("data: ", data)
     user = data['user_id']
     group = data['project_id']
     
@@ -301,20 +333,62 @@ def list_files_and_folders_single():
     # user = User.query.filter_by(id=user).first()
 
     user_identifier = get_user_identifier(user)
-    print("user_identifier: ", user_identifier)
+    # print("user_identifier: ", user_identifier)
 
-    print("user a consultar: ", user)
+    # print("user a consultar: ", user)
 
     #obtener el usuario dependiendo del id
     
 
-    print("user_directory: ")
+    # print("user_directory: ")
 
     try:
         object_list = get_object_list(user, group)
-        print(object_list)
+        #print(object_list)
         object_list = object_list['data']
         object_list = transform_to_structure(object_list)
+        #imprimir la estructura como json
+        #json.dumps(object_list)
+        # print(json.dumps(object_list))
+        return jsonify({"message": "Estructura obtenida correctamente", "structure": object_list}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+# Ruta para listar las carpetas y archivos que contiene un alumno en un grupo
+@file_bp.route('/list-subject', methods=['POST'])
+@jwt_required()  # Protegido con JWT
+def list_files_and_folders_by_subject():
+
+    # print("entro a list-subject")
+    user = get_current_user()
+    # print("user: ", user)
+    data = request.get_json()
+    user = get_user_identifier(user.id)
+    # print("data: ", data)
+    group = data['project_id']
+    
+
+    # user = User.query.filter_by(id=user).first()
+
+    user_identifier = get_user_identifier(user)
+    # print("user_identifier: ", user_identifier)
+
+    # print("user a consultar: ", user)
+
+    #obtener el usuario dependiendo del id
+    
+
+    # print("user_directory: ")
+
+    try:
+        object_list = get_object_list(user, group)
+        #print(object_list)
+        object_list = object_list['data']
+        object_list = transform_to_structure(object_list)
+        #imprimir la estructura como json
+        #json.dumps(object_list)
+        # print(json.dumps(object_list))
         return jsonify({"message": "Estructura obtenida correctamente", "structure": object_list}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -351,7 +425,14 @@ def create_folder():
         return jsonify({"error": "No se proporcionó el nombre de la carpeta"}), 400
 
     try:
-        create_path(get_user_identifier(user.id), user.openstack_id , project, parent_dir, folder_name)
+        if data.get('project_id') is not None:
+            project_id = data.get('project_id')
+            scope = Subject.query.filter_by(subject_name=project_id).first()
+            scope = scope.swift_scope
+        else:
+            scope = user.openstack_id
+
+        create_path(get_user_identifier(user.id), scope , project, parent_dir, folder_name)
         return jsonify({"message": f"Carpeta '{folder_name}' creada exitosamente"}), 200
 
     except ValueError as ve:
@@ -405,7 +486,14 @@ def download_folder():
     
     try:
         print("Iniciando descarga desde OpenStack...")  # Depuración del inicio de descarga
-        download_path_openstack(get_user_identifier(user.id), user.openstack_id, project, folder_path, full_folder_path)
+        if data.get('project_id') is not None:
+            project_id = data.get('project_id')
+            scope = Subject.query.filter_by(subject_name=project_id).first()
+            scope = scope.swift_scope
+        else:
+            scope = user.openstack_id
+
+        download_path_openstack(get_user_identifier(user.id), scope, project, folder_path, full_folder_path)
         
         zip_dir = zip_path
         print("Directorio para ZIP definido:", zip_dir)  # Depuración de directorio ZIP
@@ -506,7 +594,12 @@ def move_file_or_folder():
             user_scope = user.openstack_id
         else:
             project = data.get('project_id')
+            user_scope = Subject.query.filter_by(subject_name=project).first()
+            user_scope = user_scope.swift_scope
         print("user identifier: ", get_user_identifier(user.id))
+
+
+
 
         #si no tiene una extension es un directorio
         if "." in file_name:
@@ -523,4 +616,26 @@ def move_file_or_folder():
     except Exception as e:
         log_api_request(get_jwt_identity(), "Error al mover archivo/carpeta", "move", source_path, 500, error_message=str(e))
         return jsonify({"error": "Error interno del servidor"}), 500
-   
+
+
+@file_bp.route('/space', methods=['GET'])
+@jwt_required()
+def get_space():
+    user = get_current_user()
+    if not user:
+        return jsonify({"error": "Usuario no autenticado"}), 401
+
+    user_identifier = get_user_identifier(user.id)
+    user_directory = get_user_directory(user_identifier)
+    size = size_container(user_identifier, user.openstack_id, user_identifier)
+    total_size = user.storage_limit
+    #pasar de gb a mb
+    total_size = total_size * 1024
+    
+    used_size = size 
+    free_space = total_size - used_size
+    return jsonify({
+        "total_space": total_size,
+        "used_space": used_size,
+        "free_space": free_space
+    }), 200

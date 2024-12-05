@@ -1,5 +1,7 @@
 #logica que recibe un archivo desde un endpoint para despues mandar el archivo por una request a los contenedores de openstack
 import os
+from pathlib import PurePosixPath
+import posixpath
 from flask import Blueprint, jsonify, request
 from flask_jwt_extended import jwt_required
 import requests, json
@@ -55,7 +57,6 @@ def get_object_list_by_path(user_id, project_id, path):
     except requests.exceptions.RequestException as err:
         print("Error en la petición:", err)
     return response.json()
-
 
 def delete(user, user_scope, project, file_path, file_name):
     token = openstack_auth_id(str(user), project)
@@ -160,23 +161,55 @@ def move_path_to_path(user, user_scope, project, source_path, new_path):
     # print("objects", objects)
     #imprimir con formato json
     print(json.dumps(objects, indent=4))
+    # Obtener el nombre de la carpeta que se está moviendo (path2)
+    carpeta_mover = os.path.basename(os.path.normpath(source_path))  # 'path2'
+
     # Iterar sobre los archivos y descargarlos
+    
     for obj in objects:
 
         file_name = obj['name'].lstrip("/\\")
-
+        
         url = f"http://192.168.1.104:8080/v1/{user_scope}/{user}//{file_name}"
         print('\nurl: ',url)
 
-        # Extraer nombre del archivo
-        nombre_archivo = os.path.basename(file_name)
+        # Convertir las cadenas de ruta a objetos PurePosixPath
+        file_path = PurePosixPath(file_name)
+        new_path_obj = PurePosixPath(new_path)
+        source_path_obj = PurePosixPath(source_path)
+        carpeta_mover_obj = PurePosixPath(carpeta_mover)
+        
+        # Asegurar que file_path y source_path_obj sean rutas absolutas
+        if not file_path.is_absolute():
+            file_path = PurePosixPath('/') / file_path
+        if not source_path_obj.is_absolute():
+            source_path_obj = PurePosixPath('/') / source_path_obj
+        
+        # Extraer el nombre del archivo
+        nombre_archivo = file_path.name
+        print("nombre_archivo:", nombre_archivo)
+        print("file_name:", file_path)
+        print("new_path:", new_path_obj)
+        print("source_path:", source_path_obj)
+        
+        # Verificar si file_path está efectivamente bajo source_path_obj
+        try:
+            ruta_relativa = file_path.relative_to(source_path_obj)
+            print(f"Ruta relativa: {ruta_relativa}")
+        except ValueError:
+            # Si file_path no está bajo source_path_obj, manejar el error según sea necesario
+            print("Error: 'file_name' no está bajo 'source_path'. Se usará solo el nombre del archivo.")
+            ruta_relativa = nombre_archivo
+        
 
-        # Generar la nueva ruta
-        directorio_generado = os.path.join(new_path, nombre_archivo)
-        directorio_generado = directorio_generado.replace("\\", "/")
-        print("directorio_generado",directorio_generado)
-        # file_name = file_path + '/' + file_name
-        print("file_name updated",file_name)
+        # Generar la nueva ruta virtual
+        #contiene una extencion
+        if "." in file_path.name:
+            directorio_generado = new_path_obj / carpeta_mover_obj / ruta_relativa
+        else:
+            directorio_generado = new_path_obj / carpeta_mover_obj 
+            directorio_generado = str(directorio_generado) + "/"
+        print(f"Directorio generado: {directorio_generado}")
 
         headers = {
         'X-Auth-Token': token,
@@ -193,7 +226,6 @@ def move_path_to_path(user, user_scope, project, source_path, new_path):
         response2 = requests.delete(url, headers=headers)
         print("response2: ",response2)  
         # Solicitar el archivo al servidor
-        response = requests.delete(url, headers=headers, stream=True)
         print(response.status_code)
         if response.status_code == 200 or response.status_code == 204:
             print(f"Archivo '{file_name}' eliminado exitosamente")

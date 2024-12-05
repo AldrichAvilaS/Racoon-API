@@ -151,27 +151,24 @@ def get_enrolled_students():
 @jwt_required()  # Requiere autenticación con JWT
 #@role_required(0, 1, 3)  # Administrador (0), Academia (1) y Estudiante (3)
 def get_enrolled_subjects():
-    user = get_current_user()
+    user = get_jwt_identity()
 
+    print("user", user)
     if not user:
         return jsonify({"error": "Usuario no encontrado"}), 404
 
-    # Verificar que el usuario sea un estudiante
-    if user.role_id != 3:
-        log_api_request(user.id, "GET - Obtener Materias Inscritas - Permiso denegado", 403)
-        return jsonify({"error": "Permiso denegado"}), 403
-
+    user_id = Student.query.filter_by(boleta=user).first().user_id
     # Obtener las inscripciones del estudiante
-    enrollments = Enrollment.query.filter_by(user_id=user.id).all()
+    enrollments = Enrollment.query.filter_by(user_id=user_id).all()
     subjects = []
     for enrollment in enrollments:
         subject = Subject.query.get(enrollment.subject_id)
         if subject:
             subjects.append({
                 "subject_id": subject.subject_id,
-                "name": subject.subject_name,
-                "description": subject.description
+                "subject_name": subject.subject_name,
+                "status": enrollment.status
             })
-    
-    log_api_request(user.id, "GET - Materias inscritas por el estudiante", 200)
+    print("subjects", subjects)
+    # log_api_request(user.id, "GET - Materias inscritas por el estudiante", 200)
     return jsonify(subjects), 200
