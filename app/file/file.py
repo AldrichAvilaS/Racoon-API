@@ -631,11 +631,13 @@ def get_space():
     total_size = user.storage_limit
     #pasar de gb a mb
     total_size = total_size * 1024
-    
+
     used_size = size 
     free_space = total_size - used_size
+    #solo 2 decimales
+
     return jsonify({
         "total_space": total_size,
-        "used_space": used_size,
-        "free_space": free_space
+        "used_space": round(used_size,2),
+        "free_space": round(free_space,2)
     }), 200
