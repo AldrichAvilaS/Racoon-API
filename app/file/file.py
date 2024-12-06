@@ -269,7 +269,7 @@ def download_file_for_student():
         return jsonify({"error": "No se proporcionó la ruta del archivo"}), 400
     
     student_container = data.get('student_id')
-
+    print("student_container: ", student_container)
     project_id = data.get('project_id', get_user_identifier(user.id))
     #print(data['project_id'])
     if project_id != get_user_identifier(user.id):
@@ -516,6 +516,7 @@ def create_folder():
     except Exception as e:
         return jsonify({"error": "Error interno del servidor"}), 500
     
+    
 #--------------------------------------------------------------************--------------------------------------------------------------#
 
 # Ruta para descargar una carpeta como ZIP
@@ -570,6 +571,120 @@ def download_folder():
             scope = user.openstack_id
 
         download_path_openstack(get_user_identifier(user.id), scope, project, folder_path, full_folder_path)
+        
+        zip_dir = zip_path
+        print("Directorio para ZIP definido:", zip_dir)  # Depuración de directorio ZIP
+
+        if not os.path.exists(zip_dir):
+            print("El directorio ZIP no existe, creando:", zip_dir)  # Depuración de creación de directorio
+            os.makedirs(zip_dir)
+
+        folder_path = os.path.normpath(folder_path)
+        full_file_path = os.path.join(full_folder_path, folder_path.lstrip("/\\"))
+        full_file_path = os.path.normpath(full_file_path)
+        print("Ruta normalizada de la carpeta a comprimir:", full_file_path)  # Depuración de ruta final
+        
+        if not os.path.exists(full_file_path):
+            print(f"Error: La carpeta no existe en {full_file_path}")  # Depuración de existencia
+            return jsonify({"error": "La carpeta no existe"}), 404
+
+        zip_filename = f"{os.path.basename(full_folder_path)}_{uuid.uuid4().hex}.zip"
+        zip_filepath = os.path.join(zip_dir, zip_filename)
+        print("Ruta del archivo ZIP a generar:", zip_filepath)  # Depuración de nombre ZIP
+
+        with zipfile.ZipFile(zip_filepath, 'w', zipfile.ZIP_DEFLATED) as zf:
+            processed_files = 0
+            total_files = 0
+
+            # Usar os.walk para recorrer recursivamente
+            for root, dirs, files in os.walk(full_file_path):
+                for file in files:
+                    total_files += 1
+
+            print(f"Archivos totales a comprimir: {total_files}")  # Depuración del conteo de archivos
+
+            # Agregar archivos al ZIP
+            for root, dirs, files in os.walk(full_file_path):
+                for file in files:
+                    file_path = os.path.join(root, file)
+                    arcname = os.path.relpath(file_path, full_folder_path)  # Ruta relativa dentro del ZIP
+                    print(f"Agregando archivo al ZIP: {file_path} como {arcname}")  # Depuración del archivo agregado
+                    zf.write(file_path, arcname)
+
+                    # Actualizar progreso
+                    processed_files += 1
+                    progress = (processed_files / total_files) * 100
+                    print(f"Progreso de compresión: {progress:.2f}% ({processed_files}/{total_files})")
+
+        @after_this_request
+        def schedule_file_deletion(response):
+            print(f"Programando eliminación del archivo ZIP: {zip_filepath}")  # Depuración de eliminación
+            threading.Thread(target=delayed_file_deletion, args=(zip_filepath, 60)).start()
+            return response
+
+        print("Enviando archivo ZIP al cliente...")  # Depuración de envío
+        return send_file(zip_filepath, as_attachment=True, download_name=os.path.basename(zip_filepath))
+
+    except Exception as e:
+        print(f"Error al procesar la carpeta: {str(e)}")  # Depuración de errores
+        return jsonify({"error": f"Error al comprimir la carpeta: {str(e)}"}), 500
+
+
+# Ruta para descargar una carpeta como ZIP
+#ejemplo de entrada y salida
+# entrada
+# {
+# 	"token":
+# 	"folder_path": "ruta de la carpeta",
+# 	"project_id": "id del proyecto"
+# }
+# salida
+# "message": "Carpeta descargada exitosamente"
+# "error": "No se proporcionó la ruta de la carpeta"
+# "error": "La carpeta no existe"
+# "error": f"Error al comprimir la carpeta: {str(e)}"
+# "error": "Usuario no autenticado"
+
+@file_bp.route('/download-folder-student', methods=['POST'])
+@jwt_required()  # Proteger con JWT
+def download_folder_student():
+    print("Iniciando el proceso de descarga de carpeta...")  # Depuración inicial
+    
+    user = get_current_user()
+    if not user:
+        print("Error: Usuario no autenticado")  # Depuración de autenticación
+        return jsonify({"error": "Usuario no autenticado"}), 401
+    
+    data = request.get_json()
+    print(f"Datos recibidos: {data}")  # Depuración de los datos recibidos
+
+    # Recibir la ruta por URL
+    folder_path = '/' + data['folder_path']
+    print("Ruta proporcionada por el cliente:", folder_path)  # Depuración de ruta
+    
+    if not folder_path:
+        print("Error: No se proporcionó la ruta de la carpeta")  # Depuración de validación de ruta
+        return jsonify({"error": "No se proporcionó la ruta de la carpeta"}), 400
+    
+    project = data.get('project_id', get_user_identifier(user.id))
+    print("Proyecto identificado:", project)  # Depuración de project_id
+
+    full_folder_path = os.path.join(store_path + str(get_user_identifier(user.id)))
+    print("Ruta completa de la carpeta del usuario:", full_folder_path)  # Depuración de ruta completa
+    
+    try:
+        student_container = data.get('student_id')
+        print("student_container: ", student_container)
+
+        print("Iniciando descarga desde OpenStack...")  # Depuración del inicio de descarga
+        if data.get('project_id') is not None:
+            project_id = data.get('project_id')
+            scope = Subject.query.filter_by(subject_name=project_id).first()
+            scope = scope.swift_scope
+        else:
+            scope = user.openstack_id
+
+        download_path_openstack(student_container, scope, project, folder_path, full_folder_path)
         
         zip_dir = zip_path
         print("Directorio para ZIP definido:", zip_dir)  # Depuración de directorio ZIP
