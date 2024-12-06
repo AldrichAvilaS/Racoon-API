@@ -11,6 +11,8 @@ logs_bp = Blueprint('logs_bp', __name__)
 @jwt_required()
 #@role_required(0)  # Solo usuarios con rol "Administrador" pueden acceder
 def get_logs():
+
+    print("entro a logs")
     user_identifier = request.args.get('user_identifier')
     container_name = request.args.get('container_name')
     start_date = request.args.get('start_date')
@@ -18,7 +20,7 @@ def get_logs():
     
     # Crear la consulta base
     query = APILog.query
-    
+    print("consulto logs")
     # Filtrar por user_identifier o container_name si están presentes
     if user_identifier:
         query = query.filter_by(user_identifier=user_identifier)

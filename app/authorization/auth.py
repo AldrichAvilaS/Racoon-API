@@ -108,16 +108,22 @@ def login():
         return jsonify({"error": "Credenciales inválidas"}), 401
 
 
-    # Generar el token JWT usando el identificador especializado
+
     access_token = create_access_token(identity=identifier, expires_delta=timedelta(days=2))
     print("identicador", identifier)
 
 
 
     if user_type != 'academy':
-        size = size_container(identifier, user.openstack_id, identifier)
-        print("size", size)
-        storage_limit = user.storage_limit
+            # Generar el token JWT usando el identificador especializado
+        if not user_type == 'admin':
+        
+            size = size_container(identifier, user.openstack_id, identifier)
+            print("size", size)
+            storage_limit = user.storage_limit
+        else:
+            size = 0
+            storage_limit = 0
         #pasarlo a mb por estar en gb
         storage_limit = storage_limit * 1024
         return jsonify({
