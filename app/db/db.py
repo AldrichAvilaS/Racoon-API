@@ -168,11 +168,11 @@ def insert_default_data():
 
     if Teacher.query.count() == 0:
         admin_user = User(
-            username='admin',
-            email='admin@example.com',
+            username='Default',
+            email='Default@example.com',
             password=generate_password_hash('root'),
             role_id=Role.query.filter_by(name='Profesor').first().role_id,
-            openstack_id='00000000000000000000000000000000'
+            openstack_id='00000000000000000000000000000001'
         )
         db.session.add(admin_user)
         db.session.commit()

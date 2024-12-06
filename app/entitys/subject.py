@@ -143,6 +143,40 @@ def get_subjects():
     # log_api_request(user.id, f"GET - Obtener materias de la academia (ID: {user.academy_id})", 200)
     return jsonify(subjects_data), 200
 
+#ruta del endpoint | metodo http | funcion a ejecutar | json que recibe | variables que regresa | codigo de respuesta
+#http://localhost:5000/subject/subjects | GET | get_subjects | No requiere datos | subjects_data | 200
+# Endpoint para obtener todas las materias de una academia
+@subject_bp.route('/subjects-teacher', methods=['GET'])
+@jwt_required()  # Requiere autenticación con JWT
+#@role_required(0, 1)  # Administrador (0) y Academia (1)
+def get_subjects_by_teacher():
+    print("se intentara obtener las materias de la academia: ")
+    user= get_jwt_identity()
+    # user = get_current_user()
+
+    if not user:
+        return jsonify({"error": "Usuario no encontrado"}), 404
+    print("user", user)
+    # Obtener todas las materias de la academia de  l usuario
+    teacher = Teacher.query.filter_by(rfc=user).first()
+    subjects = Subject.query.filter_by(teacher_id=teacher.user_id).all()
+
+    subjects_data = []
+    for subject in subjects:
+        teacher = Teacher.query.filter_by(user_id=subject.teacher_id).first()
+        group = Group.query.get(subject.group_id)
+        teacher_user = User.query.get(teacher.user_id)
+        subjects_data.append({
+            "subject_id": subject.subject_id,
+            "subject_name": subject.subject_name,
+            "teacher_name": teacher_user.username,
+            "group_name": group.name,
+            "description": subject.description
+        })
+        # print("subjects_data", subjects_data)
+    
+    # log_api_request(user.id, f"GET - Obtener materias de la academia (ID: {user.academy_id})", 200)
+    return jsonify(subjects_data), 200
 
 #ruta del endpoint | metodo http | funcion a ejecutar | json que recibe | variables que regresa | codigo de respuesta
 #http://localhost:5000/subject/subject-by-group | GET | get_subject_by_group | group_id | subject_data | 200
@@ -230,6 +264,8 @@ def get_subject_by_id():
     
 
     return jsonify(students_data), 200
+
+
 
 #ruta del endpoint | metodo http | funcion a ejecutar | json que recibe | variables que regresa | codigo de respuesta
 #http://localhost:5000/subject/get-swift-scope | GET | get_swift_scope | subject_id | swift_scope | 200

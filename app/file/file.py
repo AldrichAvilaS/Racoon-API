@@ -237,6 +237,76 @@ def download_file():
     except Exception as e:
         return jsonify({"error": "Error interno del servidor"}), 500
 
+
+# Ruta para descargar un archivo
+#ejemplo de entrada y salida
+# entrada
+# {
+# 	"token": "token del usuario",
+# 	"file_path": "ruta del archivo",
+# 	"flag": "bandera de proyecto"
+# }
+# salida
+# "message": "Estructura obtenida correctamente"
+# "error": "El archivo no existe"
+# "error": "Error interno del servidor"
+# "error": str(ve)
+# "error": "No se proporcionó la ruta del archivo"
+# "error": "Usuario no autenticado"
+@file_bp.route('/download-student', methods=['POST'])
+@jwt_required()
+def download_file_for_student():
+    user = get_current_user()
+    if not user:
+        return jsonify({"error": "Usuario no autenticado"}), 401
+    
+    data = request.get_json()
+    print("data: ", data)
+    file_path = data['file_path']
+
+    print("file_path: ", file_path)
+    if not file_path:
+        return jsonify({"error": "No se proporcionó la ruta del archivo"}), 400
+    
+    student_container = data.get('student_id')
+
+    project_id = data.get('project_id', get_user_identifier(user.id))
+    #print(data['project_id'])
+    if project_id != get_user_identifier(user.id):
+        print("si hay proyecto a donde apuntar project_id")
+        scope = Subject.query.filter_by(subject_name=project_id).first()
+        scope = scope.swift_scope
+    else:
+        print("no hay proyecto a donde apuntar project_id por lo que sera el del usuarios")
+        scope = user.openstack_id
+    print("scope: ", scope)
+    try:
+        user_directory = get_user_directory(get_user_identifier(user.id))
+        print("user_directory: ", user_directory)
+        full_file_path = secure_path(user_directory, '/'+file_path)
+        print("full_file_path: ", full_file_path)
+        
+        #mandar a descargar el archivo desde openstack
+        if project_id == get_user_identifier(user.id):
+            print("no project_id")
+            download_file_openstack(student_container, scope, get_user_identifier(user.id), file_path, file_path, user_directory)
+        else:
+            print("si project_id")
+            download_file_openstack(student_container, scope, project_id, file_path, file_path, user_directory)
+        
+        print("full_file_path en funcion: ", full_file_path)
+        if not os.path.exists(full_file_path):
+            return jsonify({"error": "El archivo no existe"}), 404
+
+        # Enviar el archivo al cliente
+        return send_file(full_file_path, as_attachment=True)
+
+    except ValueError as ve:
+        print("error: ", ve)
+        return jsonify({"error": str(ve)}), 403
+    except Exception as e:
+        return jsonify({"error": "Error interno del servidor"}), 500
+    
 # Ruta para eliminar un archivo o carpeta
 #ejemplo de entrada y salida
 # entrada

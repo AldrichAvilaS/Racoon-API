@@ -57,7 +57,7 @@ def download_file_openstack(user, user_scope, project, file_path, file_name, sav
     print("project", project)
 
     token = openstack_auth_id(str(user), project)
-
+    print(token)
     # Construir la ruta completa del archivo en el contenedor
     file_full_path = f"{file_path}/{file_name}"
     print(f"Descargando archivo: {file_name}")
