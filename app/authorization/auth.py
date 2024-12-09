@@ -109,7 +109,7 @@ def login():
 
 
 
-    access_token = create_access_token(identity=identifier, expires_delta=timedelta(days=2))
+    access_token = create_access_token(identity=str(identifier), expires_delta=timedelta(days=2))
     print("identicador", identifier)
 
 
