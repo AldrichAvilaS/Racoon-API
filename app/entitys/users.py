@@ -246,7 +246,7 @@ def update_user(identifier):
 
     data = request.get_json()
     user = None
-
+    print(data)
     # Buscar al usuario según el identificador
     student = Student.query.filter_by(boleta=identifier).first()
     if student:
