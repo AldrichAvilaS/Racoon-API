@@ -112,7 +112,12 @@ def add_user():
         print("se intentara en el try creara un usuario")
         db.session.add(new_user)
         db.session.commit()
-
+        
+        print('role_id: ',role_id)
+        print(get_role_id_by_name('Estudiante'))
+        print(get_role_id_by_name('Profesor'))
+        
+        
         # Si el usuario es un estudiante o profesor, crear los registros correspondientes
         if role_id == get_role_id_by_name('Estudiante'):  # Estudiante
             if 'boleta' not in data:

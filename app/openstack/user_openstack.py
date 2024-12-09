@@ -8,9 +8,9 @@ import requests, json
 def create_user(user_id, role):
     print("Creando usuario en OpenStack")
     if role == "student":
-        fetch_url = "http://localhost:10000/user/student"
+        fetch_url = "http://192.168.1.104:10000/user/student"
     else:
-        fetch_url = "http://localhost:10000/user/teacher"
+        fetch_url = "http://192.168.1.104:10000/user/teacher"
     data = {"student_id": user_id}
     try:
         response = requests.post(fetch_url, json=data)
@@ -35,7 +35,7 @@ def create_user(user_id, role):
 #peticion a la api de openstack para crear una academia
 def create_academy_openstack(user_id):
     try:
-        fetch_url = "http://localhost:10000/user/academy"
+        fetch_url = "http://192.168.1.104:10000/user/academy"
         data = {"academy_id": user_id}
         response = requests.post(fetch_url, json=data)
         
