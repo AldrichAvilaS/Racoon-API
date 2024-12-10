@@ -45,3 +45,17 @@ def create_notice():
         db.session.rollback()
         return jsonify({"error": str(e)}), 500
     
+# Endpoint para obtener todas la ultima noticia
+@notice_bp.route('/get-notices', methods=['GET'])
+def get_notices():
+    # Obtener todas las noticias
+    notices = Notice.query.all()
+    # Serializar las noticias para el JSON de respuesta
+    notices_data = [{
+        "id": notice.id,
+        "content": notice.notice,
+        "date_at_publish": notice.date_at_publish,
+        "date_at_finish": notice.date_at_finish
+    } for notice in notices]
+
+    return jsonify(notices_data), 200
