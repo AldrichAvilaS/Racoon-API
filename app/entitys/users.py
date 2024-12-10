@@ -346,7 +346,7 @@ def info_user():
     if current_user.role_id == get_role_id_by_name('Profesor') and current_user.teacher:
         teacher = Teacher.query.filter_by(user_id=current_user.id).first()
         user_info["rfc"] = teacher.rfc
-
+    print(user_info)
     return jsonify(user_info), 200
 
 
