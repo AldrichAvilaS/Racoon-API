@@ -52,7 +52,6 @@ def get_notices():
     notices = Notice.query.all()
     # Serializar las noticias para el JSON de respuesta
     notices_data = [{
-        "id": notice.id,
         "content": notice.notice,
         "date_at_publish": notice.date_at_publish,
         "date_at_finish": notice.date_at_finish
