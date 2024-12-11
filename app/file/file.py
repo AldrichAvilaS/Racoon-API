@@ -48,7 +48,7 @@ def upload_file():
 
     data = request.get_json()
     if not data or 'file' not in data or 'filename' not in data:
-        log_api_request(get_jwt_identity(), "Subida de archivo fallida - Datos incompletos", "uploads", "unknown", 400)
+        # log_api_request(get_jwt_identity(), "Subida de archivo fallida - Datos incompletos", "uploads", "unknown", 400)
         return jsonify({"error": "Datos incompletos"}), 400
     
     file_data = data['file']  # Archivo codificado en base64
@@ -66,7 +66,7 @@ def upload_file():
 
         # Verificar el tamaño del archivo
         if len(file_bytes) > MAX_FILE_SIZE:
-            log_api_request(get_jwt_identity(), "Archivo demasiado grande", file_path, file_name, 400)
+            # log_api_request(get_jwt_identity(), "Archivo demasiado grande", file_path, file_name, 400)
             return jsonify({"error": "El archivo es demasiado grande"}), 400
         
         # Generar la ruta completa donde se guardará el archivo
@@ -99,15 +99,14 @@ def upload_file():
 
         upload_file_openstack(get_user_identifier(user.id), scope, file_project, file_path , save_path, file_name)
 
-
-        # log_api_request(get_jwt_identity(), "Subida de archivo exitosa", file_path, file_name, 200)
+        log_api_request(get_jwt_identity(), "Subida de archivo", file_project, file_name, 200)
         return jsonify({"message": "Archivo cargado correctamente"}), 200
     except base64.binascii.Error:
         return jsonify({"error": "Error al decodificar el archivo base64"}), 400
     except OSError as e:
         return jsonify({"error": f"Error de sistema: {str(e)}"}), 500
     except Exception as e:
-        log_api_request(get_jwt_identity(), "Error en la subida de archivo", file_path, file_name, 500, error_message=str(e))
+        # log_api_request(get_jwt_identity(), "Error en la subida de archivo", file_path, file_name, 500, error_message=str(e))
         return jsonify({"error": str(e)}), 500
 
 # Ruta para recibir archivos en partes (chunks)
@@ -160,7 +159,7 @@ def upload_file_chunk():
 
             upload_file_openstack(get_user_identifier(user.id), scope, file_project, file_path , save_directory, file_name)
 
-            log_api_request(get_jwt_identity(), "Subida de archivo exitosa", file_path, file_name, 200)
+            log_api_request(get_jwt_identity(), "Subida de archivo", file_project, file_name, 200)
             return jsonify({"message": "Archivo completo", "file_name": os.path.basename(final_file_path)}), 200
 
         return jsonify({"message": f"Chunk {chunk_index + 1} de {total_chunks} recibido"}), 200
@@ -229,6 +228,8 @@ def download_file():
             return jsonify({"error": "El archivo no existe"}), 404
 
         # Enviar el archivo al cliente
+        log_api_request(get_jwt_identity(), "Archivo Descargado", project_id, file_path, 200)
+
         return send_file(full_file_path, as_attachment=True)
 
     except ValueError as ve:
@@ -298,7 +299,10 @@ def download_file_for_student():
         if not os.path.exists(full_file_path):
             return jsonify({"error": "El archivo no existe"}), 404
 
+        log_api_request(get_jwt_identity(), "Subida de archivo exitosa", project_id, file_path, 200)
+
         # Enviar el archivo al cliente
+        
         return send_file(full_file_path, as_attachment=True)
 
     except ValueError as ve:
@@ -363,8 +367,10 @@ def delete_file_or_folder():
             print("es una carpeta")
             delete_path_openstack(user_identifier, scope, project_id, target_path)
         
+        
+        log_api_request(get_jwt_identity(), "Archivo Eliminado", project_id, target_path, 200)
 
-        log_api_request(get_jwt_identity(), "Eliminación exitosa", "delete", target_path, 200)
+        # log_api_request(get_jwt_identity(), "Eliminación exitosa", "delete", target_path, 200)
         return jsonify({"message": f"'{target_path}' eliminado exitosamente"}), 200
 
     except ValueError as ve:
@@ -509,6 +515,8 @@ def create_folder():
             scope = user.openstack_id
 
         create_path(get_user_identifier(user.id), scope , project, parent_dir, folder_name)
+        log_api_request(get_jwt_identity(), "Crear carpeta", project, parent_dir + '/' + folder_name, 200)
+
         return jsonify({"message": f"Carpeta '{folder_name}' creada exitosamente"}), 200
 
     except ValueError as ve:
@@ -799,7 +807,9 @@ def move_file_or_folder():
         else:
             print("es un directorio el que se mueve")
             move_path_to_path(get_user_identifier(user.id), user_scope, project, source_path, destination_path)
-            
+        
+        log_api_request(get_jwt_identity(), "mover archivo", project, source_path, 200)
+
         return jsonify({"message": f"'{source_path}' movido exitosamente a '{destination_path}'"}), 200
 
     except ValueError as ve:

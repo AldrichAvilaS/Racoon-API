@@ -77,7 +77,7 @@ def add_user():
     # Validar datos requeridos
     required_fields = ['username', 'email', 'role_id']
     if not data or not all(field in data for field in required_fields):
-        log_api_request(get_jwt_identity(), 'POST - Agregar Usuario - Datos incompletos', "users", "none", 400)
+        # log_api_request(get_jwt_identity(), 'POST - Agregar Usuario - Datos incompletos', "users", "none", 400)
         return jsonify({"error": "Datos incompletos"}), 400
 
     # Verificar si el rol existe
@@ -90,7 +90,7 @@ def add_user():
     existing_role = Role.query.get(role_id)
     print(existing_role)
     if existing_role is None:
-        log_api_request(get_jwt_identity(), 'POST - Agregar Usuario - Rol inexistente', "users", "none", 400)
+        # log_api_request(get_jwt_identity(), 'POST - Agregar Usuario - Rol inexistente', "users", "none", 400)
         return jsonify({"error": f"El rol con ID {role_id} no existe."}), 400
 
     password = data.get('password')
@@ -135,7 +135,7 @@ def add_user():
             db.session.commit()
         elif role_id == get_role_id_by_name('Profesor'):  # Profesor
             if 'rfc' not in data:
-                log_api_request(get_jwt_identity(), 'POST - Agregar Usuario - RFC requerido para profesores', "users", "none", 400)
+                # log_api_request(get_jwt_identity(), 'POST - Agregar Usuario - RFC requerido para profesores', "users", "none", 400)
                 return jsonify({"error": "El campo 'rfc' es obligatorio para profesores."}), 400
             print("se creara un profesor")
             new_teacher = Teacher(
@@ -147,19 +147,19 @@ def add_user():
             db.session.add(new_teacher)
             db.session.commit()
 
-        log_api_request(get_jwt_identity(), 'POST - Usuario creado con éxito', "users", "none", 201)
+        log_api_request(get_jwt_identity(), 'Usuario creado con éxito', "users", "none", 201)
         return jsonify({"message": "Usuario creado con éxito"}), 201
     except IntegrityError as e:
         db.session.rollback()
         if 'UNIQUE constraint failed' in str(e.orig):
-            log_api_request(get_jwt_identity(), 'POST - Error - Username o email en uso', "users", "none", 400)
+            # log_api_request(get_jwt_identity(), 'POST - Error - Username o email en uso', "users", "none", 400)
             return jsonify({"error": "El nombre de usuario o email ya está en uso."}), 400
         else:
-            log_api_request(get_jwt_identity(), 'POST - Error al crear usuario', "users", "none", 500)
+            # log_api_request(get_jwt_identity(), 'POST - Error al crear usuario', "users", "none", 500)
             return jsonify({"error": "Error al crear el usuario."}), 500
     except Exception as e:
         db.session.rollback()
-        log_api_request(get_jwt_identity(), 'POST - Error general', "users", "none", 500, error_message=str(e))
+        # log_api_request(get_jwt_identity(), 'POST - Error general', "users", "none", 500, error_message=str(e))
         return jsonify({"error": str(e)}), 500
 
 #ruta del endpoint | metodo http | funcion a ejecutar | json que recibe | variables que regresa | codigo de respuesta
@@ -176,7 +176,7 @@ def get_users():
     else:
         users = User.query.all()  # Obtener todos los usuarios si no se especifica un rol
 
-    log_api_request(get_jwt_identity(), 'GET - Obtener todos los usuarios', "users", "none", 200)
+    # log_api_request(get_jwt_identity(), 'GET - Obtener todos los usuarios', "users", "none", 200)
     
     users_data = []
     for user in users:
@@ -218,10 +218,10 @@ def get_user(identifier):
             return jsonify({"error": "Usuario no encontrado"}), 404
 
     if user is None:
-        log_api_request(get_jwt_identity(), 'GET - Usuario no encontrado', "users", identifier, 404)
+        # log_api_request(get_jwt_identity(), 'GET - Usuario no encontrado', "users", identifier, 404)
         return jsonify({"error": "Usuario no encontrado"}), 404
 
-    log_api_request(get_jwt_identity(), 'GET - Usuario encontrado', "users", identifier, 200)
+    # log_api_request(get_jwt_identity(), 'GET - Usuario encontrado', "users", identifier, 200)
     user_info = {
         'username': user.username,
         'email': user.email,
@@ -260,7 +260,7 @@ def update_user(identifier):
             return jsonify({"error": "Usuario no encontrado"}), 404
 
     if user is None:
-        log_api_request(get_jwt_identity(), 'PUT - Usuario no encontrado', "users", identifier, 404)
+        # log_api_request(get_jwt_identity(), 'PUT - Usuario no encontrado', "users", identifier, 404)
         return jsonify({"error": "Usuario no encontrado"}), 404
 
     # Actualizar solo los campos proporcionados
@@ -277,7 +277,7 @@ def update_user(identifier):
         user.teacher.rfc = data['rfc']
     user.active = True
     db.session.commit()
-    log_api_request(get_jwt_identity(), 'PUT - Usuario actualizado con éxito', "users", identifier, 200)
+    log_api_request(get_jwt_identity(), 'Usuario actualizado con éxito', "users", identifier, 200)
     return jsonify({"message": "Usuario actualizado con éxito"}), 200
 
 #ruta del endpoint | metodo http | funcion a ejecutar | json que recibe | variables que regresa | codigo de respuesta
@@ -302,7 +302,7 @@ def delete_user(identifier):
             return jsonify({"error": "Usuario no encontrado"}), 404
 
     if user is None:
-        log_api_request(get_jwt_identity(), 'DELETE - Usuario no encontrado', "users", identifier, 404)
+        # log_api_request(get_jwt_identity(), 'DELETE - Usuario no encontrado', "users", identifier, 404)
         return jsonify({"error": "Usuario no encontrado"}), 404
 
     # Eliminar registros asociados
@@ -313,7 +313,7 @@ def delete_user(identifier):
 
     db.session.delete(user)
     db.session.commit()
-    log_api_request(get_jwt_identity(), 'DELETE - Usuario eliminado', "users", identifier, 200)
+    log_api_request(get_jwt_identity(), 'Usuario eliminado', "users", identifier, 200)
     return jsonify({"message": "Usuario eliminado con éxito"}), 200
 
 #ruta del endpoint | metodo http | funcion a ejecutar | json que recibe | variables que regresa | codigo de respuesta

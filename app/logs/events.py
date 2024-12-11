@@ -46,6 +46,8 @@ def get_logs():
     if not user_identifier and not container_name and not start_date and not end_date:
         query = APILog.query
 
+    # Ordenar por fecha de creación descendente
+    query = query.order_by(APILog.timestamp.desc())
     # Ejecutar la consulta y obtener los resultados
     logs = query.all()
     

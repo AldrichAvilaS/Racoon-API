@@ -68,7 +68,7 @@ def create_group():
         db.session.add(new_group)
         db.session.commit()
 
-        # log_api_request(user.id, f"POST - Grupo creado, ID: {new_group.id}, Nombre: {new_group.name}", 201)  # Log opcional
+        log_api_request(get_jwt_identity(), f"POST - Grupo creado, ID: {new_group.id}, Nombre: {new_group.name}", 201)  # Log opcional
         return jsonify({"message": "Grupo creado exitosamente", "group_id": new_group.id}), 201
 
     except IntegrityError:

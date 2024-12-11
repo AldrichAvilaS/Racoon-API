@@ -80,7 +80,7 @@ def create_academy():
 def get_academies():
     try:
         academies = Academy.query.all()
-        log_api_request(get_jwt_identity(), 'GET - Obtener todas las academias', "academies", "none", 200)
+        # log_api_request(get_jwt_identity(), 'GET - Obtener todas las academias', "academies", "none", 200)
         
         academies_data = []
         for academy in academies:
@@ -99,7 +99,7 @@ def get_academies():
         return jsonify(academies_data), 200
     
     except Exception as e:
-        log_api_request(get_jwt_identity(), 'GET - Error al obtener academias', "academies", "none", 500, error_message=str(e))
+        # log_api_request(get_jwt_identity(), 'GET - Error al obtener academias', "academies", "none", 500, error_message=str(e))
         return jsonify({"error": "Error al obtener academias."}), 500
 
 #ruta del endpoint | metodo http | funcion a ejecutar | json que recibe | variables que regresa | codigo de respuesta
@@ -112,14 +112,14 @@ def get_academy(academy_id):
     try:
         academy = Academy.query.get(academy_id)
         if not academy:
-            log_api_request(get_jwt_identity(), 'GET - Academia no encontrada', "academies", str(academy_id), 404)
+            # log_api_request(get_jwt_identity(), 'GET - Academia no encontrada', "academies", str(academy_id), 404)
             return jsonify({"error": "Academia no encontrada"}), 404
 
         # Verificar si hay un profesor principal
         main = Teacher.query.filter_by(user_id=academy.main_teacher_id).first() 
         main_teacher_rfc = main.rfc if main else None  # Manejar el caso donde no hay profesor principal
 
-        log_api_request(get_jwt_identity(), 'GET - Academia encontrada', "academies", str(academy_id), 200)
+        # log_api_request(get_jwt_identity(), 'GET - Academia encontrada', "academies", str(academy_id), 200)
         academy_data = {
             'academy_id': academy.academy_id,
             'name': academy.name,
@@ -129,7 +129,7 @@ def get_academy(academy_id):
         return jsonify(academy_data), 200
     
     except Exception as e:
-        log_api_request(get_jwt_identity(), 'GET - Error al obtener academia', "academies", str(academy_id), 500, error_message=str(e))
+        # log_api_request(get_jwt_identity(), 'GET - Error al obtener academia', "academies", str(academy_id), 500, error_message=str(e))
         return jsonify({"error": "Error al obtener la academia."}), 500
 
 #ruta del endpoint | metodo http | funcion a ejecutar | json que recibe | variables que regresa | codigo de respuesta
@@ -142,7 +142,7 @@ def update_academy(academy_id):
     data = request.get_json()
     academy = Academy.query.get(academy_id)
     if not academy:
-        log_api_request(get_jwt_identity(), 'PUT - Academia no encontrada', "academies", str(academy_id), 404)
+        # log_api_request(get_jwt_identity(), 'PUT - Academia no encontrada', "academies", str(academy_id), 404)
         return jsonify({"error": "Academia no encontrada"}), 404
 
     # Actualizar campos proporcionados
@@ -158,7 +158,7 @@ def update_academy(academy_id):
         academy.main_teacher_id = main_teacher.user_id
 
     db.session.commit()
-    log_api_request(get_jwt_identity(), 'PUT - Academia actualizada con éxito', "academies", str(academy_id), 200)
+    log_api_request(get_jwt_identity(), 'Academia actualizada con éxito', "academies", str(academy_id), 200)
     return jsonify({"message": "Academia actualizada con éxito"}), 200
 
 
@@ -172,12 +172,12 @@ def update_academy(academy_id):
 def delete_academy(academy_id):
     academy = Academy.query.get(academy_id)
     if not academy:
-        log_api_request(get_jwt_identity(), 'DELETE - Academia no encontrada', "academies", str(academy_id), 404)
+        # log_api_request(get_jwt_identity(), 'DELETE - Academia no encontrada', "academies", str(academy_id), 404)
         return jsonify({"error": "Academia no encontrada"}), 404
 
     db.session.delete(academy)
     db.session.commit()
-    log_api_request(get_jwt_identity(), 'DELETE - Academia eliminada', "academies", str(academy_id), 200)
+    log_api_request(get_jwt_identity(), 'Academia eliminada', "academies", str(academy_id), 200)
     return jsonify({"message": "Academia eliminada con éxito"}), 200
 
 
