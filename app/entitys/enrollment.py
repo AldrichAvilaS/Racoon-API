@@ -88,7 +88,7 @@ def create_enrollment():
         create_path(user, project_scope, subject.subject_name, '', 'Primer Parcial')
         create_path(user, project_scope, subject.subject_name, '', 'Segundo Parcial')
         create_path(user, project_scope, subject.subject_name, '', 'Tercer Parcial')
-        # log_api_request(user.id, f"POST - Inscripción creada para el estudiante {data['user_id']} en la materia {data['subject_id']}", 201)
+        log_api_request(get_jwt_identity(), f"Inscripción creada para el estudiante {data['user_id']} en la materia {data['subject_id']}", 201)
         return jsonify({"message": "Inscripción creada exitosamente", "enrollment_id": new_enrollment.enrollment_id}), 201
 
     except IntegrityError:
@@ -119,18 +119,18 @@ def get_enrolled_students():
     subject_id = request.args.get('subject_id')
 
     if not subject_id:
-        log_api_request(user.id, "GET - Obtener Alumnos Inscritos - Datos incompletos", 400)
+        # log_api_request(user.id, "GET - Obtener Alumnos Inscritos - Datos incompletos", 400)
         return jsonify({"error": "Datos incompletos"}), 400
 
     # Verificar que la materia exista
     subject = Subject.query.get(subject_id)
     if not subject:
-        log_api_request(user.id, f"GET - Obtener Alumnos Inscritos - Materia no encontrada (ID: {subject_id})", 404)
+        # log_api_request(user.id, f"GET - Obtener Alumnos Inscritos - Materia no encontrada (ID: {subject_id})", 404)
         return jsonify({"error": "Materia no encontrada"}), 404
 
     # Verificar que el usuario tenga permisos para acceder a los alumnos inscritos
     if user.role_id == 2 and subject.teacher_id != user.id:  # Profesor
-        log_api_request(user.id, f"GET - Obtener Alumnos Inscritos - Permiso denegado para la materia {subject_id}", 403)
+        # log_api_request(user.id, f"GET - Obtener Alumnos Inscritos - Permiso denegado para la materia {subject_id}", 403)
         return jsonify({"error": "Permiso denegado"}), 403
     
     # Obtener los alumnos inscritos en la materia
@@ -146,7 +146,7 @@ def get_enrolled_students():
                 "email": student.user.email
             })
     
-    log_api_request(user.id, f"GET - Alumnos inscritos en la materia {subject_id}", 200)
+    log_api_request(get_jwt_identity(), f"Alumno inscrito en la materia {subject_id}", 200)
     return jsonify(students), 200
 
 

@@ -95,7 +95,7 @@ def create_subject():
         if not teacher_id == 'XXXX000000XX0':
             assigment_role(teacher_user.rfc, project_name, "teacher")
 
-        # log_api_request(user.id, f"POST - Materia creada, ID: {new_subject.subject_id}, Nombre: {new_subject.subject_name}", 201)
+        log_api_request(get_jwt_identity(), f"Materia creada, ID: {new_subject.subject_id}, Nombre: {new_subject.subject_name}", 201)
         return jsonify({"message": "Materia creada exitosamente", "subject_id": new_subject.subject_id}), 201
 
     except IntegrityError:
@@ -193,19 +193,19 @@ def get_subject_by_group():
     group_id = request.args.get('group_id')
 
     if not group_id:
-        log_api_request(user.id, "GET - Obtener Materia por Grupo - Datos incompletos", 400)
+        # log_api_request(user.id, "GET - Obtener Materia por Grupo - Datos incompletos", 400)
         return jsonify({"error": "Datos incompletos"}), 400
 
     # Verificar que el grupo exista
     group = Group.query.get(group_id)
     if not group:
-        log_api_request(user.id, f"GET - Obtener Materia por Grupo - Grupo no encontrado (ID: {group_id})", 404)
+        # log_api_request(user.id, f"GET - Obtener Materia por Grupo - Grupo no encontrado (ID: {group_id})", 404)
         return jsonify({"error": "Grupo no encontrado"}), 404
 
     # Obtener la materia asociada al grupo
     subject = Subject.query.filter_by(group_id=group_id).first()
     if not subject:
-        log_api_request(user.id, f"GET - Obtener Materia por Grupo - Materia no encontrada para el grupo {group_id}", 404)
+        # log_api_request(user.id, f"GET - Obtener Materia por Grupo - Materia no encontrada para el grupo {group_id}", 404)
         return jsonify({"error": "Materia no encontrada"}), 404
 
     teacher = Teacher.query.filter_by(user_id=subject.teacher_id).first()
@@ -217,7 +217,7 @@ def get_subject_by_group():
         "description": subject.description
     }
 
-    log_api_request(user.id, f"GET - Materia por Grupo (ID: {group_id})", 200)
+    # log_api_request(user.id, f"GET - Materia por Grupo (ID: {group_id})", 200)
     return jsonify(subject_data), 200
 
 #ruta del endpoint | metodo http | funcion a ejecutar | json que recibe | variables que regresa | codigo de respuesta
