@@ -50,11 +50,12 @@ def create_notice():
 def get_notices():
     # Obtener todas las noticias
     notices = Notice.query.all()
-    # Serializar las noticias para el JSON de respuesta
+    # obtener la ultima noticia
     notices_data = [{
         "content": notice.notice,
         "date_at_publish": notice.date_at_publish,
         "date_at_finish": notice.date_at_finish
     } for notice in notices]
-
+    print(notices_data)
+    
     return jsonify(notices_data), 200

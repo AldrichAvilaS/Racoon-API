@@ -72,10 +72,12 @@ def download_file_openstack(user, user_scope, project, file_path, file_name, sav
 
     # URL de descarga del archivo desde OpenStack Swift
     #si file name empieza con una barra
-    if count_slashes > 1:
+    if count_slashes >= 1:
         file_name = '/' + file_name
+        print("es ruta")
         url = f"http://192.168.1.104:8080/v1/{user_scope}/{user}/{file_name}"
     else:
+        print("no es ruta")
         url = f"http://192.168.1.104:8080/v1/{user_scope}/{user}/{file_name}"
     print(url)
 

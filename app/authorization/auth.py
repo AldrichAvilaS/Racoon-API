@@ -17,7 +17,7 @@ def detect_identifier_type(identifier):
     elif re.match(r'^[A-ZÑ&]{3,4}\d{6}[A-Z0-9]{3}$', identifier, re.IGNORECASE):
         return 'teacher'
     # Detectar si es una academy_id (asumiendo que es un número entero pero no una boleta)
-    elif identifier.isdigit() and len(identifier) == 8:
+    elif identifier.isdigit() and len(identifier) == 8: #10000000
         return 'academy'
     # Detectar si es un administrador (por ejemplo, 'admin' o un username específico)
     elif identifier.lower() in ['admin', 'administrator']:

@@ -104,7 +104,7 @@ def add_user():
         username=data['username'],
         email=data['email'],
         password=hashed_password,
-        active=False,
+        active=True,
         role_id=role_id,
         storage_limit = 2,  # Por defecto, 2 GB de almacenamiento
         openstack_id = '0'
