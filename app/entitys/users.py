@@ -176,7 +176,7 @@ def get_users():
     else:
         users = User.query.all()  # Obtener todos los usuarios si no se especifica un rol
 
-    log_api_request(get_jwt_identity(), 'GET - Obtener todos los usuarios', "users", "none", 200)
+    # log_api_request(get_jwt_identity(), 'GET - Obtener todos los usuarios', "users", "none", 200)
     
     users_data = []
     for user in users:
@@ -218,10 +218,10 @@ def get_user(identifier):
             return jsonify({"error": "Usuario no encontrado"}), 404
 
     if user is None:
-        log_api_request(get_jwt_identity(), 'GET - Usuario no encontrado', "users", identifier, 404)
+        # log_api_request(get_jwt_identity(), 'GET - Usuario no encontrado', "users", identifier, 404)
         return jsonify({"error": "Usuario no encontrado"}), 404
 
-    log_api_request(get_jwt_identity(), 'GET - Usuario encontrado', "users", identifier, 200)
+    # log_api_request(get_jwt_identity(), 'GET - Usuario encontrado', "users", identifier, 200)
     user_info = {
         'username': user.username,
         'email': user.email,
@@ -260,7 +260,7 @@ def update_user(identifier):
             return jsonify({"error": "Usuario no encontrado"}), 404
 
     if user is None:
-        log_api_request(get_jwt_identity(), 'PUT - Usuario no encontrado', "users", identifier, 404)
+        # log_api_request(get_jwt_identity(), 'PUT - Usuario no encontrado', "users", identifier, 404)
         return jsonify({"error": "Usuario no encontrado"}), 404
 
     # Actualizar solo los campos proporcionados
