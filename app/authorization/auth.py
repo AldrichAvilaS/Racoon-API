@@ -128,7 +128,7 @@ def login():
         storage_limit = storage_limit * 1024
         return jsonify({
             "message": "Inicio de sesión exitoso",
-            "access_token": access_token,
+            "access_token": str(access_token),
             "active": user.active,
             "user_type": get_user_role_value(user),
             "user_id": identifier,  # Enviamos el identificador especializado

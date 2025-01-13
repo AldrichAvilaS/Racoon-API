@@ -112,7 +112,12 @@ def add_user():
         print("se intentara en el try creara un usuario")
         db.session.add(new_user)
         db.session.commit()
-
+        
+        print('role_id: ',role_id)
+        print(get_role_id_by_name('Estudiante'))
+        print(get_role_id_by_name('Profesor'))
+        
+        
         # Si el usuario es un estudiante o profesor, crear los registros correspondientes
         if role_id == get_role_id_by_name('Estudiante'):  # Estudiante
             if 'boleta' not in data:
@@ -171,7 +176,7 @@ def get_users():
     else:
         users = User.query.all()  # Obtener todos los usuarios si no se especifica un rol
 
-    log_api_request(get_jwt_identity(), 'GET - Obtener todos los usuarios', "users", "none", 200)
+    # log_api_request(get_jwt_identity(), 'GET - Obtener todos los usuarios', "users", "none", 200)
     
     users_data = []
     for user in users:
@@ -213,10 +218,10 @@ def get_user(identifier):
             return jsonify({"error": "Usuario no encontrado"}), 404
 
     if user is None:
-        log_api_request(get_jwt_identity(), 'GET - Usuario no encontrado', "users", identifier, 404)
+        # log_api_request(get_jwt_identity(), 'GET - Usuario no encontrado', "users", identifier, 404)
         return jsonify({"error": "Usuario no encontrado"}), 404
 
-    log_api_request(get_jwt_identity(), 'GET - Usuario encontrado', "users", identifier, 200)
+    # log_api_request(get_jwt_identity(), 'GET - Usuario encontrado', "users", identifier, 200)
     user_info = {
         'username': user.username,
         'email': user.email,
@@ -241,7 +246,7 @@ def update_user(identifier):
 
     data = request.get_json()
     user = None
-
+    print(data)
     # Buscar al usuario según el identificador
     student = Student.query.filter_by(boleta=identifier).first()
     if student:
@@ -255,7 +260,7 @@ def update_user(identifier):
             return jsonify({"error": "Usuario no encontrado"}), 404
 
     if user is None:
-        log_api_request(get_jwt_identity(), 'PUT - Usuario no encontrado', "users", identifier, 404)
+        # log_api_request(get_jwt_identity(), 'PUT - Usuario no encontrado', "users", identifier, 404)
         return jsonify({"error": "Usuario no encontrado"}), 404
 
     # Actualizar solo los campos proporcionados
@@ -341,7 +346,7 @@ def info_user():
     if current_user.role_id == get_role_id_by_name('Profesor') and current_user.teacher:
         teacher = Teacher.query.filter_by(user_id=current_user.id).first()
         user_info["rfc"] = teacher.rfc
-
+    print(user_info)
     return jsonify(user_info), 200
 
 

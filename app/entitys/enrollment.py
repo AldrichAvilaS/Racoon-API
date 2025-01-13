@@ -5,7 +5,7 @@ from sqlalchemy.exc import IntegrityError
 from ..db.db import Enrollment, Subject, db, User, Student, Teacher
 from ..logs.logs import log_api_request  
 from ..authorization.decorators import role_required  
-from ..openstack.conteners import create_project, assigment_role
+from ..openstack.conteners import create_path, create_project, assigment_role
 
 #crear el blueprint para las materias
 enrollment_bp = Blueprint('enrollment', __name__)
@@ -81,6 +81,13 @@ def create_enrollment():
         db.session.commit()
 
         assigment_role(student_user.boleta, subject.subject_name, "student")
+        
+        #crear carpetas en el contenedor del usuario en openstack de la materia
+        project_scope=subject.swift_scope
+
+        create_path(user, project_scope, subject.subject_name, '', 'Primer Parcial')
+        create_path(user, project_scope, subject.subject_name, '', 'Segundo Parcial')
+        create_path(user, project_scope, subject.subject_name, '', 'Tercer Parcial')
         # log_api_request(user.id, f"POST - Inscripción creada para el estudiante {data['user_id']} en la materia {data['subject_id']}", 201)
         return jsonify({"message": "Inscripción creada exitosamente", "enrollment_id": new_enrollment.enrollment_id}), 201
 

@@ -8,7 +8,7 @@ logs_bp = Blueprint('logs_bp', __name__)
 
 # Obtener logs filtrados por user_identifier, container_name y rango de fechas opcional
 @logs_bp.route('/', methods=['GET'])
-@jwt_required()
+#@jwt_required()
 #@role_required(0)  # Solo usuarios con rol "Administrador" pueden acceder
 def get_logs():
 
@@ -60,5 +60,6 @@ def get_logs():
         "timestamp": log.timestamp,
         "error_message": log.error_message
     } for log in logs]
-
+    print("logs_data", jsonify(logs_data))
+    
     return jsonify(logs_data), 200

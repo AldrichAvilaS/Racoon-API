@@ -31,6 +31,7 @@ def create_academy():
     
     # Verificar que el profesor principal exista y sea un profesor
     print("buscando profesor principal")
+    rfc = data.get('main_teacher_rfc', 'XXXX000000XX0')
     main_teacher = Teacher.query.filter_by(rfc=data['main_teacher_rfc']).first()
     print("main_teacher", main_teacher.user_id)
     if not main_teacher:

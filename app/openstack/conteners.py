@@ -10,7 +10,7 @@ from ..db.path import *
 
 #crear proyecto en openstack
 def create_project(project_id):
-    fetch_url = "http://localhost:10000/project/"
+    fetch_url = "http://192.168.1.104:10000/project/"
     data = {"project": project_id}
     try:
         response = requests.post(fetch_url, json=data)
@@ -36,11 +36,11 @@ def assigment_role(user_id, project_id, role):
     print("Asignando rol en OpenStack")
     print
     if role == "student":
-        fetch_url = "http://localhost:10000/role/student"
+        fetch_url = "http://192.168.1.104:10000/role/student"
     elif role == "teacher":
-        fetch_url = "http://localhost:10000/role/teacher"
+        fetch_url = "http://192.168.1.104:10000/role/teacher"
     elif role == "academy":
-        fetch_url = "http://localhost:10000/role/academy"
+        fetch_url = "http://192.168.1.104:10000/role/academy"
 
     data = {"user": user_id, "project": project_id}
     try:

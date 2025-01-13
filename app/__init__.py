@@ -26,10 +26,10 @@ from .openstack.load import upload_bp
 
 def create_app():
     app = Flask(__name__)
-    CORS(app, supports_credentials=True)  # Permite el uso de credenciales
+    CORS(app, supports_credentials=True, resources={r"/*": {"origins": "https://racooncloud.me"}})  # Permite el uso de credenciales
     
     # Configuración de la base de datos
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql://root:root@localhost/test'
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql://api_creator:root@localhost/test'
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 
